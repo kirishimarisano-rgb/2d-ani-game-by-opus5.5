@@ -159,6 +159,7 @@ function text(str, x, y, size = 8, color = '#fff', align = 'left') {
 }
 
 // ---------------- 輸入 ----------------
+const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 const keys = {};
 const pressed = {};
 addEventListener('keydown', e => {
@@ -167,6 +168,8 @@ addEventListener('keydown', e => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
+// 點擊畫面：在非遊玩狀態視為「確認」
+cv.addEventListener('pointerdown', e => { e.preventDefault(); if (state !== 'play') pressed.Enter = true; });
 function hit(code) { if (pressed[code]) { pressed[code] = false; return true; } return false; }
 function anyHit(...codes) { let r = false; for (const c of codes) if (hit(c)) r = true; return r; }
 
@@ -186,12 +189,21 @@ function drawBG(dt) {
 }
 
 // ---------------- 遊戲狀態 ----------------
-let state, player, pShots, enemies, eShots, parts, score, time, spawnT;
+let state = 'title', player, pShots, enemies, eShots, parts, score, time, spawnT;
+let stateT = 0, newRecord = false;
+function loadHi() { try { return parseInt(localStorage.getItem('aira_hi') || '0', 10) || 0; } catch (e) { return 0; } }
+function saveHi(v) { try { localStorage.setItem('aira_hi', String(v)); } catch (e) { } }
+let hiScore = loadHi();
+function setState(s) { state = s; stateT = 0; }
 function newGame() {
   player = { x: W / 2, y: H - 50, r: 2, hp: 5, maxHp: 5, inv: 0, cd: 0, power: 1 };
   pShots = []; enemies = []; eShots = []; parts = [];
-  score = 0; time = 0; spawnT = 1;
-  state = 'play';
+  score = 0; time = 0; spawnT = 1; newRecord = false;
+  setState('play');
+}
+function gameOver() {
+  setState('over');
+  if (score > hiScore) { hiScore = score; newRecord = true; saveHi(hiScore); }
 }
 
 function aimAt(x, y) { return Math.atan2(player.y - y, player.x - x); }
@@ -298,7 +310,7 @@ function hurtPlayer() {
   burst(player.x, player.y, 20, ['#ffffff', '#ff5fa2', '#d2c0ff'], 90);
   // 受擊時清除附近子彈，避免連續被打
   for (const b of eShots) if (Math.hypot(b.x - player.x, b.y - player.y) < 50) b.dead = true;
-  if (player.hp <= 0) { state = 'over'; burst(player.x, player.y, 50, ['#ffffff', '#ff5fa2', '#ffd94a'], 140, 1); }
+  if (player.hp <= 0) { gameOver(); burst(player.x, player.y, 50, ['#ffffff', '#ff5fa2', '#ffd94a'], 140, 1); }
 }
 function updateParts(dt) {
   for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy *= 0.96; p.life -= dt; }
@@ -328,29 +340,77 @@ function flashCache(img) { if (!_flash.has(img)) _flash.set(img, flashOf(img)); 
 
 function drawHUD() {
   text('SCORE ' + String(score).padStart(8, '0'), 4, 4, 8, '#ffffff');
+  text('HI ' + String(Math.max(hiScore, score)).padStart(8, '0'), 4, 14, 7, '#b9c9ff');
   for (let i = 0; i < player.maxHp; i++) ctx.drawImage(i < player.hp ? SPR_HEART : SPR_HEART_EMPTY, W - 10 - i * 9, 4);
 }
 
 // ---------------- 主迴圈 ----------------
 const STEP = 1 / 60;
 let last = performance.now(), acc = 0;
+const START_KEYS = ['Enter', 'KeyZ', 'Space', 'KeyJ'];
 function update(dt) {
-  if (state === 'play') updatePlay(dt);
-  else if (state === 'over') {
+  stateT += dt;
+  if (state === 'title') {
+    if (anyHit(...START_KEYS)) newGame();
+  } else if (state === 'play') {
+    if (anyHit('KeyP', 'Escape')) { setState('pause'); return; }
+    updatePlay(dt);
+  } else if (state === 'pause') {
+    if (anyHit('KeyP', 'Escape', 'Enter')) state = 'play';
+    else if (hit('KeyR')) newGame();
+    else if (hit('KeyQ')) setState('title');
+  } else if (state === 'over') {
     updateParts(dt);
-    if (anyHit('Enter', 'KeyZ', 'Space', 'KeyR')) newGame();
+    if (stateT > 0.8) {
+      if (anyHit(...START_KEYS, 'KeyR')) newGame();
+      else if (anyHit('Escape', 'KeyQ')) setState('title');
+    }
   }
+}
+function dim(a = 0.6) { ctx.fillStyle = `rgba(11,6,24,${a})`; ctx.fillRect(0, 0, W, H); }
+function blink(rate = 2) { return Math.floor(performance.now() / 1000 * rate * 2) % 2 === 0; }
+function drawTitle() {
+  const t = performance.now() / 1000;
+  // 放大的主角立繪
+  const sc = 5, img = SPR_PLAYER;
+  const bob = Math.round(Math.sin(t * 2) * 3);
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = '#ff5fa2';
+  for (let i = 0; i < 12; i++) { const a = t * 0.5 + i * Math.PI / 6; ctx.fillRect(W / 2 + Math.cos(a) * 70 - 1, 150 + Math.sin(a) * 70 - 1, 3, 3); }
+  ctx.globalAlpha = 1;
+  ctx.drawImage(img, Math.round(W / 2 - img.width * sc / 2), 95 + bob, img.width * sc, img.height * sc);
+  text('星織魔法少女', W / 2, 26, 13, '#ffd94a', 'center');
+  text('STARLIGHT AIRA', W / 2, 44, 20, '#ff8fc4', 'center');
+  text('HI-SCORE ' + String(hiScore).padStart(8, '0'), W / 2, 76, 8, '#b9c9ff', 'center');
+  if (blink(1.2)) text(IS_TOUCH ? '— 點擊畫面開始 —' : '— 按 Z / Enter 開始 —', W / 2, 222, 10, '#ffffff', 'center');
+  const lines = IS_TOUCH ?
+    ['拖曳：移動（自動射擊）', '右下按鈕：星爆炸彈', '右上按鈕：暫停'] :
+    ['方向鍵/WASD：移動', 'Z/Space：射擊  Shift：低速', 'X：星爆炸彈  P/Esc：暫停', 'M：靜音'];
+  lines.forEach((l, i) => text(l, W / 2, 250 + i * 13, 8, '#d2c0ff', 'center'));
+  text('© 2026 原創角色「艾菈」', W / 2, H - 14, 7, '#6a5a9a', 'center');
 }
 function render(dt) {
   ctx.setTransform(S, 0, 0, S, 0, 0);
   ctx.imageSmoothingEnabled = false;
-  drawBG(dt);
+  drawBG(state === 'pause' ? 0 : dt);
+  if (state === 'title') { drawTitle(); return; }
   drawWorld();
   drawHUD();
-  if (state === 'over') {
-    ctx.fillStyle = 'rgba(11,6,24,0.6)'; ctx.fillRect(0, 0, W, H);
-    text('GAME OVER', W / 2, H / 2 - 20, 20, '#ff5fa2', 'center');
-    text('按 Enter / Z 重新開始', W / 2, H / 2 + 10, 9, '#ffffff', 'center');
+  if (state === 'pause') {
+    dim(0.55);
+    text('PAUSE', W / 2, H / 2 - 40, 20, '#ffd94a', 'center');
+    text(IS_TOUCH ? '點擊畫面繼續' : 'P / Esc：繼續', W / 2, H / 2, 9, '#fff', 'center');
+    text(IS_TOUCH ? '' : 'R：重新開始   Q：回標題', W / 2, H / 2 + 16, 9, '#d2c0ff', 'center');
+  } else if (state === 'over') {
+    dim(Math.min(0.65, stateT));
+    text('GAME OVER', W / 2, H / 2 - 50, 22, '#ff5fa2', 'center');
+    text('SCORE ' + score, W / 2, H / 2 - 16, 10, '#fff', 'center');
+    text('HI-SCORE ' + hiScore, W / 2, H / 2, 9, '#b9c9ff', 'center');
+    if (newRecord && blink(3)) text('★ NEW RECORD ★', W / 2, H / 2 + 16, 10, '#ffd94a', 'center');
+    if (stateT > 0.8) {
+      text(IS_TOUCH ? '點擊畫面重新開始' : 'Z / Enter：重新開始', W / 2, H / 2 + 40, 9, '#fff', 'center');
+      if (!IS_TOUCH) text('Q / Esc：回標題', W / 2, H / 2 + 54, 9, '#d2c0ff', 'center');
+    }
   }
 }
 function frame(now) {
@@ -363,7 +423,6 @@ function frame(now) {
   if (n > 0) for (const k in pressed) pressed[k] = false;
   requestAnimationFrame(frame);
 }
-newGame();
 requestAnimationFrame(frame);
 </script>
 </body>
