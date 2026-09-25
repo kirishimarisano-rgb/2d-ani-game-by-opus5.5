@@ -281,13 +281,43 @@ const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 const keys = {};
 const pressed = {};
 addEventListener('keydown', e => {
+  initAudio();
+  if (e.code === 'KeyM' && !e.repeat) toggleMute();
   if (!keys[e.code]) pressed[e.code] = true;
   keys[e.code] = true;
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
-// 點擊畫面：在非遊玩狀態視為「確認」
-cv.addEventListener('pointerdown', e => { e.preventDefault(); if (state !== 'play') pressed.Enter = true; });
+// ---- 觸控：拖曳相對移動 + 自動射擊；右下炸彈鈕、右上暫停鈕
+let usingTouch = IS_TOUCH, movePtr = null, lastPt = null;
+const BTN_BOMB = { x: W - 30, y: H - 44, r: 17 }, BTN_PAUSE = { x: W - 13, y: 36, r: 10 }, BTN_MUTE = { x: W - 14, y: 14, r: 10 };
+function toLogical(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
+function inBtn(p, b) { return Math.hypot(p.x - b.x, p.y - b.y) < b.r + 4; }
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  initAudio();
+  if (e.pointerType === 'touch') usingTouch = true;
+  const pt = toLogical(e);
+  if (state === 'play') {
+    if (usingTouch && inBtn(pt, BTN_PAUSE)) { pressed.KeyP = true; return; }
+    if (usingTouch && inBtn(pt, BTN_BOMB)) { pressed.KeyX = true; return; }
+    movePtr = e.pointerId; lastPt = pt;
+    try { cv.setPointerCapture(e.pointerId); } catch (_) { }
+  } else if (state === 'title' && inBtn(pt, BTN_MUTE)) {
+    toggleMute();
+  } else pressed.Enter = true;
+});
+cv.addEventListener('pointermove', e => {
+  if (e.pointerId !== movePtr || state !== 'play') return;
+  e.preventDefault();
+  const pt = toLogical(e);
+  player.x += (pt.x - lastPt.x) * 1.25; player.y += (pt.y - lastPt.y) * 1.25;
+  lastPt = pt;
+});
+const endPtr = e => { if (e.pointerId === movePtr) { movePtr = null; lastPt = null; } };
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; movePtr = null; if (state === 'play') setState('pause'); });
 function hit(code) { if (pressed[code]) { pressed[code] = false; return true; } return false; }
 function anyHit(...codes) { let r = false; for (const c of codes) if (hit(c)) r = true; return r; }
 
@@ -306,11 +336,105 @@ function drawBG(dt) {
   }
 }
 
+// ---------------- 音效（Web Audio API 即時合成） ----------------
+let AC = null, master = null, noiseBuf = null, muted = false;
+try { muted = localStorage.getItem('aira_mute') === '1'; } catch (e) { }
+function initAudio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain(); master.gain.value = muted ? 0 : 0.35; master.connect(AC.destination);
+    noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  } catch (e) { AC = null; }
+}
+function toggleMute() {
+  muted = !muted;
+  try { localStorage.setItem('aira_mute', muted ? '1' : '0'); } catch (e) { }
+  if (master) master.gain.value = muted ? 0 : 0.35;
+}
+function tone(type, f0, f1, dur, vol = 0.2, delay = 0) {
+  const t = AC.currentTime + delay;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f0, t);
+  if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function noise(dur, vol = 0.2, f0 = 3000, f1 = 200, delay = 0) {
+  const t = AC.currentTime + delay;
+  const s = AC.createBufferSource(); s.buffer = noiseBuf;
+  const fl = AC.createBiquadFilter(); fl.type = 'lowpass';
+  fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+  const g = AC.createGain();
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+  s.connect(fl); fl.connect(g); g.connect(master);
+  s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
+}
+const SFX_GAP = { shoot: 0.07, hit: 0.045, graze: 0.05, pop: 0.03, coin: 0.035, boom: 0.08 };
+const lastSfx = {};
+function sfx(n) {
+  if (!AC || muted) return;
+  const now = AC.currentTime;
+  if (lastSfx[n] !== undefined && now - lastSfx[n] < (SFX_GAP[n] || 0)) return;
+  lastSfx[n] = now;
+  switch (n) {
+    case 'shoot': tone('square', 1100, 700, 0.05, 0.035); break;
+    case 'hit': noise(0.04, 0.09, 5000, 1500); break;
+    case 'pop': noise(0.16, 0.22, 3500, 300); tone('square', 420, 90, 0.12, 0.07); break;
+    case 'boom': noise(0.7, 0.5, 2500, 50); tone('sine', 140, 30, 0.6, 0.45); break;
+    case 'hurt': tone('sawtooth', 700, 90, 0.4, 0.22); noise(0.3, 0.25, 2000, 100); break;
+    case 'dead': tone('sawtooth', 520, 40, 1.3, 0.28); noise(1.1, 0.4, 1800, 40); break;
+    case 'power': [523, 659, 784, 1047].forEach((f, i) => tone('square', f, f, 0.08, 0.07, i * 0.05)); break;
+    case 'coin': tone('square', 1320, 1980, 0.07, 0.045); break;
+    case 'graze': tone('triangle', 2200, 2600, 0.03, 0.05); break;
+    case 'bomb': noise(1.3, 0.5, 6000, 60); tone('sine', 90, 25, 1.1, 0.5); [784, 988, 1175, 1568].forEach((f, i) => tone('triangle', f, f, 0.18, 0.1, i * 0.06)); break;
+    case 'warn': for (let i = 0; i < 3; i++) { tone('square', 440, 440, 0.32, 0.1, i * 0.9); tone('square', 330, 330, 0.32, 0.1, i * 0.9 + 0.42); } break;
+    case 'phase': tone('sawtooth', 160, 1000, 0.9, 0.2); noise(0.9, 0.3, 3000, 80); break;
+    case 'clear': [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone('square', f, f, 0.16, 0.09, i * 0.12)); break;
+    case 'start': [392, 523, 659, 784].forEach((f, i) => tone('square', f, f, 0.1, 0.09, i * 0.07)); break;
+    case 'pause': tone('square', 660, 660, 0.06, 0.07); tone('square', 990, 990, 0.08, 0.07, 0.07); break;
+  }
+}
+// ---- 背景音樂：簡易晶片音樂編曲器（低音 + 琶音 + 旋律 + 鼓）
+const BGM = {
+  stage: { bpm: 148, prog: [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]],
+    mel: [76, -1, 74, 72, 74, -1, 76, -1, 79, -1, 76, 74, 72, -1, 69, -1] },
+  boss: { bpm: 172, prog: [[50, 53, 57], [46, 50, 53], [48, 52, 55], [45, 49, 52]],
+    mel: [74, 74, -1, 77, -1, 76, 74, -1, 73, -1, 69, -1, 70, 73, 74, -1] },
+};
+let bgmName = null, bgmStep = 0, bgmNext = 0;
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function bgmTick() {
+  if (!AC || AC.state !== 'running') return;
+  const want = muted ? null : state === 'play' ? (boss || warnT > 0 ? 'boss' : 'stage') : null;
+  if (want !== bgmName) { bgmName = want; bgmStep = 0; bgmNext = AC.currentTime + 0.05; }
+  if (!bgmName) return;
+  if (bgmNext < AC.currentTime) bgmNext = AC.currentTime + 0.02;
+  const song = BGM[bgmName], st = 60 / song.bpm / 4;
+  while (bgmNext < AC.currentTime + 0.15) {
+    const s = bgmStep % 16, bar = Math.floor(bgmStep / 16) % song.prog.length, ch = song.prog[bar];
+    const d = bgmNext - AC.currentTime;
+    if (s % 2 === 0) { const f = mtof(ch[0] - 24 + (s % 4 === 2 ? 12 : 0)); tone('triangle', f, f, st * 1.8, 0.16, d); }
+    const af = mtof(ch[s % 3] + 12); tone('square', af, af, st * 0.8, 0.018, d);
+    const m = song.mel[(s + (bar % 2) * 8) % 16];
+    if (m > 0 && bar % 4 !== 3) { const mf = mtof(m + (bar % 4 === 2 ? -2 : 0)); tone('square', mf, mf, st * 1.7, 0.03, d); }
+    if (s % 8 === 0) tone('sine', 150, 40, 0.12, 0.25, d);
+    if (s % 4 === 2) noise(0.03, 0.05, 9000, 6000, d);
+    if (s % 8 === 4) noise(0.1, 0.1, 3000, 800, d);
+    bgmStep++; bgmNext += st;
+  }
+}
+setInterval(bgmTick, 40);
+
 // ---------------- 遊戲狀態 ----------------
 let state = 'title', player, pShots, enemies, eShots, parts, items, score, stageT, spawnT;
 let stateT = 0, newRecord = false, loop = 1, boss = null, bossPhase = 0, warnT = 0, clearT = 0, bombT = 0, banner = null;
-let shake = 0;
-function sfx() { }
+let shake = 0, hurtFlash = 0;
 const BOSS_T = 62;
 function loadHi() { try { return parseInt(localStorage.getItem('aira_hi') || '0', 10) || 0; } catch (e) { return 0; } }
 function saveHi(v) { try { localStorage.setItem('aira_hi', String(v)); } catch (e) { } }
@@ -319,7 +443,8 @@ function setState(s) { state = s; stateT = 0; }
 function newGame() {
   player = { x: W / 2, y: H - 50, r: 2, hp: 5, maxHp: 5, inv: 0, cd: 0, power: 1, bombs: 3 };
   pShots = []; enemies = []; eShots = []; parts = []; items = [];
-  score = 0; stageT = 0; spawnT = 1.5; newRecord = false; loop = 1;
+  score = 0; stageT = 0; spawnT = 1.5; newRecord = false; loop = 1; hurtFlash = 0; movePtr = null;
+  sfx('start');
   boss = null; bossPhase = 0; warnT = 0; clearT = 0; bombT = 0; shake = 0;
   showBanner('STAGE START', '夜空的星之魔法少女 出擊！');
   setState('play');
@@ -337,7 +462,9 @@ function fire(x, y, ang, spd, spr = 'pink', r = 2.5) {
   eShots.push({ x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, spr, r });
 }
 function ring(x, y, n, off, spd, spr, r) { for (let i = 0; i < n; i++) fire(x, y, off + i * Math.PI * 2 / n, spd, spr, r); }
+function shock(x, y, r, col = '#ffffff', life = 0.35) { parts.push({ x, y, vx: 0, vy: 0, life, max: life, ring: r, col, sz: 1 }); }
 function burst(x, y, n, cols, spd = 60, life = 0.5) {
+  if (n >= 14) shock(x, y, Math.min(60, n * 1.2), cols[1] || '#fff', Math.min(0.6, life));
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, v = spd * (0.3 + Math.random());
     parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: life * (0.5 + Math.random() * 0.8), max: life, col: cols[i % cols.length], sz: Math.random() < 0.3 ? 2 : 1 });
@@ -590,7 +717,7 @@ function hurtPlayer() {
   player.inv = 2;
   player.power = Math.max(1, player.power - 1);
   burst(player.x, player.y, 26, ['#ffffff', '#ff5fa2', '#d2c0ff'], 100);
-  shake = 0.5; sfx('hurt');
+  shake = 0.5; hurtFlash = 0.35; sfx('hurt');
   // 受擊時清除附近子彈，避免連續被打
   for (const b of eShots) if (Math.hypot(b.x - player.x, b.y - player.y) < 50) b.dead = true;
   if (player.hp <= 0) { gameOver(); burst(player.x, player.y, 60, ['#ffffff', '#ff5fa2', '#ffd94a'], 150, 1.1); sfx('dead'); }
@@ -612,7 +739,7 @@ function updatePlay(dt) {
   p.y = Math.max(28, Math.min(H - 12, p.y));
   p.inv = Math.max(0, p.inv - dt);
   p.cd -= dt;
-  if ((keys.KeyZ || keys.Space || keys.KeyJ) && p.cd <= 0) { p.cd = 0.085; playerShoot(); }
+  if ((keys.KeyZ || keys.Space || keys.KeyJ || movePtr !== null) && p.cd <= 0) { p.cd = 0.085; playerShoot(); }
   if (anyHit('KeyX', 'KeyK') && p.bombs > 0 && bombT <= 0) useBomb();
   if (bombT > 0) { bombT -= dt; cancelBullets(10); }
 
@@ -628,6 +755,7 @@ function updatePlay(dt) {
   }
   if (banner) { banner.time -= dt; if (banner.time <= 0) banner = null; }
   shake = Math.max(0, shake - dt);
+  hurtFlash = Math.max(0, hurtFlash - dt);
 
   // ---- 更新子彈 / 敵人
   for (const b of pShots) {
@@ -708,6 +836,7 @@ function drawWorld() {
   if (state !== 'over' && (player.inv <= 0 || Math.floor(player.inv * 20) % 2 === 0)) {
     if (player.power >= 3) for (const s of [-1, 1]) drawC(SPR_OPTION, player.x + s * 14, player.y + 2 + Math.sin(t * 5 + s) * 2);
     drawC(SPR_PLAYER, player.x, player.y);
+    if (Math.random() < 0.5) parts.push({ x: player.x + (Math.random() - 0.5) * 8, y: player.y + 11, vx: 0, vy: 40 + Math.random() * 30, life: 0.35, max: 0.35, col: Math.random() < 0.5 ? '#ff8fc4' : '#5ef2d0', sz: 1 });
     if (keys.ShiftLeft || keys.ShiftRight) {
       ctx.fillStyle = '#fff'; ctx.fillRect(Math.round(player.x) - 1, Math.round(player.y) - 1, 3, 3);
       ctx.fillStyle = '#ff2e63'; ctx.fillRect(Math.round(player.x), Math.round(player.y), 1, 1);
@@ -717,6 +846,7 @@ function drawWorld() {
   for (const p of parts) {
     ctx.globalAlpha = Math.min(1, p.life / p.max * 1.5);
     if (p.txt) text(p.txt, p.x, p.y, 7, '#ffd94a', 'center');
+    else if (p.ring) { ctx.strokeStyle = p.col; ctx.lineWidth = 2 * p.life / p.max + 0.5; ctx.beginPath(); ctx.arc(p.x, p.y, p.ring * (1 - p.life / p.max) + 2, 0, Math.PI * 2); ctx.stroke(); }
     else { ctx.fillStyle = p.col; ctx.fillRect(p.x, p.y, p.sz, p.sz); }
   }
   ctx.globalAlpha = 1;
@@ -766,10 +896,10 @@ function update(dt) {
   if (state === 'title') {
     if (anyHit(...START_KEYS)) newGame();
   } else if (state === 'play') {
-    if (anyHit('KeyP', 'Escape')) { setState('pause'); return; }
+    if (anyHit('KeyP', 'Escape')) { setState('pause'); sfx('pause'); return; }
     updatePlay(dt);
   } else if (state === 'pause') {
-    if (anyHit('KeyP', 'Escape', 'Enter')) state = 'play';
+    if (anyHit('KeyP', 'Escape', 'Enter')) { state = 'play'; sfx('pause'); }
     else if (hit('KeyR')) newGame();
     else if (hit('KeyQ')) setState('title');
   } else if (state === 'over') {
@@ -801,14 +931,34 @@ function drawTitle() {
     ['方向鍵/WASD：移動', 'Z/Space：射擊  Shift：低速', 'X：星爆炸彈  P/Esc：暫停', 'M：靜音'];
   lines.forEach((l, i) => text(l, W / 2, 250 + i * 13, 8, '#d2c0ff', 'center'));
   text('© 2026 原創角色「艾菈」', W / 2, H - 14, 7, '#6a5a9a', 'center');
+  text(muted ? '♪OFF' : '♪ON', W - 4, 10, 8, muted ? '#6a5a9a' : '#5ef2d0', 'right');
+}
+function drawTouchUI() {
+  const b = BTN_BOMB, pz = BTN_PAUSE;
+  ctx.globalAlpha = player.bombs > 0 ? 0.75 : 0.3;
+  ctx.fillStyle = '#1b0f2e'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#6fa8ff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.drawImage(SPR_BOMBICON, b.x - 7, b.y - 9, 15, 15);
+  text('×' + player.bombs, b.x, b.y + 5, 7, '#fff', 'center');
+  ctx.globalAlpha = 0.6;
+  ctx.fillStyle = '#1b0f2e'; ctx.beginPath(); ctx.arc(pz.x, pz.y, pz.r - 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.fillRect(pz.x - 3, pz.y - 4, 2, 8); ctx.fillRect(pz.x + 1, pz.y - 4, 2, 8);
+  ctx.globalAlpha = 1;
 }
 function render(dt) {
   ctx.setTransform(S, 0, 0, S, 0, 0);
   ctx.imageSmoothingEnabled = false;
   drawBG(state === 'pause' ? 0 : dt);
   if (state === 'title') { drawTitle(); return; }
+  if (shake > 0 && state !== 'pause') {
+    const m = Math.min(1, shake) * 5;
+    ctx.setTransform(S, 0, 0, S, Math.round((Math.random() - 0.5) * m) * S, Math.round((Math.random() - 0.5) * m) * S);
+  }
   drawWorld();
+  ctx.setTransform(S, 0, 0, S, 0, 0);
+  if (hurtFlash > 0) { ctx.fillStyle = `rgba(255,40,90,${hurtFlash})`; ctx.fillRect(0, 0, W, H); }
   drawHUD();
+  if (usingTouch && state === 'play') drawTouchUI();
   if (state === 'pause') {
     dim(0.55);
     text('PAUSE', W / 2, H / 2 - 40, 20, '#ffd94a', 'center');
