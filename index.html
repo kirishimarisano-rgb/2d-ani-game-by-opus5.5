@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0618">
+<title>星織魔法少女 艾菈 ☆ STARLIGHT AIRA</title>
+<style>
+html,body{margin:0;height:100%;background:#0b0618;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 0 40px #3a1f6a88}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<script>
+'use strict';
+// ============================================================
+//  STARLIGHT AIRA — 原創像素魔法少女縱向彈幕射擊
+//  所有圖像以字元陣列定義像素，全部由程式繪製
+// ============================================================
+const W = 240, H = 360;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let S = 1;
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const sc = Math.min(innerWidth / W, innerHeight / H);
+  cv.style.width = Math.floor(W * sc) + 'px';
+  cv.style.height = Math.floor(H * sc) + 'px';
+  cv.width = Math.floor(W * sc * dpr);
+  cv.height = Math.floor(H * sc * dpr);
+  S = cv.width / W;
+}
+addEventListener('resize', resize);
+resize();
+
+// ---------------- 像素圖工具 ----------------
+function sprite(rows, pal, mirror) {
+  if (mirror) rows = rows.map(r => r + [...r].reverse().join(''));
+  const h = rows.length, w = Math.max(...rows.map(r => r.length));
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  for (let y = 0; y < h; y++) for (let x = 0; x < rows[y].length; x++) {
+    const col = pal[rows[y][x]];
+    if (!col) continue;
+    g.fillStyle = col; g.fillRect(x, y, 1, 1);
+  }
+  return c;
+}
+function flashOf(c, color = '#fff') {
+  const f = document.createElement('canvas');
+  f.width = c.width; f.height = c.height;
+  const g = f.getContext('2d');
+  g.drawImage(c, 0, 0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = color; g.fillRect(0, 0, f.width, f.height);
+  return f;
+}
+function bulletSprite(r, rim, core) {
+  const d = r * 2 + 1, c = document.createElement('canvas');
+  c.width = c.height = d;
+  const g = c.getContext('2d');
+  for (let y = 0; y < d; y++) for (let x = 0; x < d; x++) {
+    const dd = Math.hypot(x - r, y - r);
+    if (dd <= r + 0.3) { g.fillStyle = dd <= r * 0.55 ? core : rim; g.fillRect(x, y, 1, 1); }
+  }
+  return c;
+}
+
+const PAL = {
+  K: '#1b0f2e', H: '#d2c0ff', h: '#8f6fe6', S: '#ffe3cf', s: '#f6a9a0',
+  E: '#2fd2ff', e: '#ffffff', D: '#0b4f95', M: '#e0457b', W: '#ffffff',
+  w: '#b9c9ff', P: '#ff5fa2', Y: '#ffd94a', C: '#5ef2d0'
+};
+// 主角：艾菈（原創）— 薰衣草銀髮、星形髮飾、白薄荷洋裝
+const SPR_PLAYER = sprite([
+  '.....KKKKKK.....',
+  '...KKHHHHHHKK...',
+  '..KHHHHHHHHHHK..',
+  '.KHHHHHHHHHYHHK.',
+  '.KHHHHHHHHYYYHK.',
+  'KHHHHHHHHHHYHHHK',
+  'KHHKHHHHHHKHKHHK',
+  'KHKSKHHHHKSSKHhK',
+  'KhKSSSSSSSSSSKhK',
+  'KhKSeESSSSeESKhK',
+  'KhKSEDSSSSEDSKhK',
+  'KhhKsSSMMSSsKhhK',
+  'KhhKKSSSSSSKKhhK',
+  '.KhKKPPYYPPKKhK.',
+  '.KhKWWPPPPWWKhK.',
+  '..KSKWWCCWWKSK..',
+  '...KWWwWWwWWK...',
+  '..KWWwWWWWwWWK..',
+  '..KPPPPPPPPPPK..',
+  '...KKSK..KSKK...',
+  '....KSK..KSK....',
+  '....KKK..KKK....',
+], PAL);
+
+// 敵人1：夜蝠精
+const SPR_BAT = sprite([
+  'K............K',
+  'KK..KKKKKK..KK',
+  'KVK.KVVVVK.KVK',
+  'KVVKVVVVVVKVVK',
+  'KVVVVRVVRVVVVK',
+  '.KVVVVVVVVVVK.',
+  '..KVVVwwVVVK..',
+  '...KVVVVVVK...',
+  '....KK..KK....',
+], { K: '#12061f', V: '#8a46d0', R: '#ff3b5c', w: '#ffffff' });
+
+const SPR_PSHOT = sprite([
+  '.CC.',
+  'CWWC',
+  'CWWC',
+  'CWWC',
+  '.CC.',
+  '..C.',
+], { C: '#5ef2d0', W: '#ffffff' });
+
+const SPR_HEART = sprite([
+  '.KK.KK.',
+  'KPPKPPK',
+  'KPWPPPK',
+  'KPPPPPK',
+  '.KPPPK.',
+  '..KPK..',
+  '...K...',
+], { K: '#1b0f2e', P: '#ff4f86', W: '#ffffff' });
+const SPR_HEART_EMPTY = sprite([
+  '.KK.KK.',
+  'KPPKPPK',
+  'KPPPPPK',
+  'KPPPPPK',
+  '.KPPPK.',
+  '..KPK..',
+  '...K...',
+], { K: '#1b0f2e', P: '#4a3a66' });
+
+const BUL = {
+  pink: bulletSprite(3, '#ff4fa0', '#ffffff'),
+  blue: bulletSprite(3, '#3fa9ff', '#ffffff'),
+  violet: bulletSprite(3, '#b05cff', '#ffffff'),
+  gold: bulletSprite(3, '#ffc53d', '#ffffff'),
+  bigred: bulletSprite(5, '#ff3355', '#ffe0e8'),
+};
+
+function drawC(img, x, y) { ctx.drawImage(img, Math.round(x - img.width / 2), Math.round(y - img.height / 2)); }
+function text(str, x, y, size = 8, color = '#fff', align = 'left') {
+  ctx.font = `bold ${size}px "Courier New", "Noto Sans TC", "Microsoft JhengHei", monospace`;
+  ctx.textAlign = align; ctx.textBaseline = 'top';
+  ctx.lineWidth = Math.max(2, size / 4); ctx.strokeStyle = '#12061f'; ctx.lineJoin = 'round';
+  ctx.strokeText(str, x, y);
+  ctx.fillStyle = color; ctx.fillText(str, x, y);
+}
+
+// ---------------- 輸入 ----------------
+const keys = {};
+const pressed = {};
+addEventListener('keydown', e => {
+  if (!keys[e.code]) pressed[e.code] = true;
+  keys[e.code] = true;
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+function hit(code) { if (pressed[code]) { pressed[code] = false; return true; } return false; }
+function anyHit(...codes) { let r = false; for (const c of codes) if (hit(c)) r = true; return r; }
+
+// ---------------- 背景 ----------------
+const stars = [];
+for (let i = 0; i < 90; i++) stars.push({ x: Math.random() * W, y: Math.random() * H, l: 1 + (i % 3) });
+function drawBG(dt) {
+  const gr = ctx.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, '#0b0618'); gr.addColorStop(0.6, '#1c0f3a'); gr.addColorStop(1, '#3a1a52');
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+  for (const s of stars) {
+    s.y += s.l * 18 * dt;
+    if (s.y > H) { s.y -= H; s.x = Math.random() * W; }
+    ctx.fillStyle = s.l === 3 ? '#ffffff' : s.l === 2 ? '#b9a8ff' : '#5a4a8a';
+    ctx.fillRect(Math.round(s.x), Math.round(s.y), 1, s.l === 3 ? 2 : 1);
+  }
+}
+
+// ---------------- 遊戲狀態 ----------------
+let state, player, pShots, enemies, eShots, parts, score, time, spawnT;
+function newGame() {
+  player = { x: W / 2, y: H - 50, r: 2, hp: 5, maxHp: 5, inv: 0, cd: 0, power: 1 };
+  pShots = []; enemies = []; eShots = []; parts = [];
+  score = 0; time = 0; spawnT = 1;
+  state = 'play';
+}
+
+function aimAt(x, y) { return Math.atan2(player.y - y, player.x - x); }
+function fire(x, y, ang, spd, spr = 'pink', r = 2.5) {
+  eShots.push({ x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, spr, r });
+}
+function burst(x, y, n, cols, spd = 60, life = 0.5) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = spd * (0.3 + Math.random());
+    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: life * (0.5 + Math.random() * 0.8), max: life, col: cols[i % cols.length], sz: Math.random() < 0.3 ? 2 : 1 });
+  }
+}
+
+function spawnBat(x) {
+  enemies.push({ type: 'bat', x, x0: x, y: -10, vy: 45 + Math.random() * 20, t: 0, hp: 3, r: 6, score: 100, flash: 0, shot: 0.8 + Math.random() * 1.2 });
+}
+
+function updatePlay(dt) {
+  time += dt;
+  // ---- 玩家
+  const focus = keys.ShiftLeft || keys.ShiftRight;
+  const sp = focus ? 55 : 120;
+  let mx = 0, my = 0;
+  if (keys.ArrowLeft || keys.KeyA) mx--;
+  if (keys.ArrowRight || keys.KeyD) mx++;
+  if (keys.ArrowUp || keys.KeyW) my--;
+  if (keys.ArrowDown || keys.KeyS) my++;
+  if (mx && my) { mx *= 0.7071; my *= 0.7071; }
+  player.x = Math.max(8, Math.min(W - 8, player.x + mx * sp * dt));
+  player.y = Math.max(20, Math.min(H - 12, player.y + my * sp * dt));
+  player.inv = Math.max(0, player.inv - dt);
+  player.cd -= dt;
+  const shooting = keys.KeyZ || keys.Space || keys.KeyJ;
+  if (shooting && player.cd <= 0) {
+    player.cd = 0.085;
+    pShots.push({ x: player.x - 4, y: player.y - 10, vx: 0, vy: -330, dmg: 1 });
+    pShots.push({ x: player.x + 4, y: player.y - 10, vx: 0, vy: -330, dmg: 1 });
+  }
+
+  // ---- 生成敵人
+  spawnT -= dt;
+  if (spawnT <= 0) {
+    spawnT = Math.max(0.35, 1.1 - time * 0.01);
+    spawnBat(16 + Math.random() * (W - 32));
+  }
+
+  // ---- 更新子彈 / 敵人
+  for (const b of pShots) { b.x += b.vx * dt; b.y += b.vy * dt; }
+  pShots = pShots.filter(b => b.y > -10 && b.x > -10 && b.x < W + 10 && !b.dead);
+
+  for (const e of enemies) {
+    e.t += dt; e.flash = Math.max(0, e.flash - dt);
+    if (e.type === 'bat') {
+      e.y += e.vy * dt;
+      e.x = e.x0 + Math.sin(e.t * 2.4) * 22;
+      e.shot -= dt;
+      if (e.shot <= 0 && e.y < H * 0.6) { e.shot = 1.6 + Math.random(); fire(e.x, e.y, aimAt(e.x, e.y), 85, 'pink'); }
+    }
+    if (e.y > H + 20) e.dead = true;
+  }
+  for (const b of eShots) { b.x += b.vx * dt; b.y += b.vy * dt; if (b.x < -10 || b.x > W + 10 || b.y < -10 || b.y > H + 10) b.dead = true; }
+
+  // ---- 碰撞：玩家子彈 → 敵人
+  for (const b of pShots) {
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const dx = b.x - e.x, dy = b.y - e.y;
+      if (dx * dx + dy * dy < (e.r + 3) ** 2) {
+        b.dead = true; e.hp -= b.dmg; e.flash = 0.06;
+        if (e.hp <= 0) killEnemy(e);
+        break;
+      }
+    }
+  }
+  // ---- 碰撞：敵彈/敵人 → 玩家
+  if (player.inv <= 0) {
+    for (const b of eShots) {
+      const dx = b.x - player.x, dy = b.y - player.y;
+      if (dx * dx + dy * dy < (b.r + player.r) ** 2) { b.dead = true; hurtPlayer(); break; }
+    }
+  }
+  if (player.inv <= 0) {
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const dx = e.x - player.x, dy = e.y - player.y;
+      if (dx * dx + dy * dy < (e.r + 3) ** 2) { hurtPlayer(); break; }
+    }
+  }
+
+  pShots = pShots.filter(b => !b.dead);
+  enemies = enemies.filter(e => !e.dead);
+  eShots = eShots.filter(b => !b.dead);
+  updateParts(dt);
+}
+
+function killEnemy(e) {
+  e.dead = true;
+  score += e.score;
+  burst(e.x, e.y, 14, ['#ffffff', '#ffd94a', '#ff5fa2', '#b05cff'], 70);
+}
+function hurtPlayer() {
+  player.hp--;
+  player.inv = 2;
+  burst(player.x, player.y, 20, ['#ffffff', '#ff5fa2', '#d2c0ff'], 90);
+  // 受擊時清除附近子彈，避免連續被打
+  for (const b of eShots) if (Math.hypot(b.x - player.x, b.y - player.y) < 50) b.dead = true;
+  if (player.hp <= 0) { state = 'over'; burst(player.x, player.y, 50, ['#ffffff', '#ff5fa2', '#ffd94a'], 140, 1); }
+}
+function updateParts(dt) {
+  for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy *= 0.96; p.life -= dt; }
+  parts = parts.filter(p => p.life > 0);
+}
+
+// ---------------- 繪製 ----------------
+function drawWorld() {
+  for (const e of enemies) {
+    const img = SPR_BAT;
+    drawC(e.flash > 0 ? flashCache(img) : img, e.x, e.y);
+  }
+  if (state !== 'over' && (player.inv <= 0 || Math.floor(player.inv * 20) % 2 === 0)) {
+    drawC(SPR_PLAYER, player.x, player.y);
+    if (keys.ShiftLeft || keys.ShiftRight) {
+      ctx.fillStyle = '#fff'; ctx.fillRect(Math.round(player.x) - 1, Math.round(player.y) - 1, 3, 3);
+      ctx.fillStyle = '#ff2e63'; ctx.fillRect(Math.round(player.x), Math.round(player.y), 1, 1);
+    }
+  }
+  for (const b of pShots) drawC(SPR_PSHOT, b.x, b.y);
+  for (const p of parts) { ctx.globalAlpha = Math.min(1, p.life / p.max * 1.5); ctx.fillStyle = p.col; ctx.fillRect(p.x, p.y, p.sz, p.sz); }
+  ctx.globalAlpha = 1;
+  for (const b of eShots) drawC(BUL[b.spr], b.x, b.y);
+}
+const _flash = new Map();
+function flashCache(img) { if (!_flash.has(img)) _flash.set(img, flashOf(img)); return _flash.get(img); }
+
+function drawHUD() {
+  text('SCORE ' + String(score).padStart(8, '0'), 4, 4, 8, '#ffffff');
+  for (let i = 0; i < player.maxHp; i++) ctx.drawImage(i < player.hp ? SPR_HEART : SPR_HEART_EMPTY, W - 10 - i * 9, 4);
+}
+
+// ---------------- 主迴圈 ----------------
+const STEP = 1 / 60;
+let last = performance.now(), acc = 0;
+function update(dt) {
+  if (state === 'play') updatePlay(dt);
+  else if (state === 'over') {
+    updateParts(dt);
+    if (anyHit('Enter', 'KeyZ', 'Space', 'KeyR')) newGame();
+  }
+}
+function render(dt) {
+  ctx.setTransform(S, 0, 0, S, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  drawBG(dt);
+  drawWorld();
+  drawHUD();
+  if (state === 'over') {
+    ctx.fillStyle = 'rgba(11,6,24,0.6)'; ctx.fillRect(0, 0, W, H);
+    text('GAME OVER', W / 2, H / 2 - 20, 20, '#ff5fa2', 'center');
+    text('按 Enter / Z 重新開始', W / 2, H / 2 + 10, 9, '#ffffff', 'center');
+  }
+}
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  acc += dt;
+  let n = 0;
+  while (acc >= STEP && n < 6) { update(STEP); acc -= STEP; n++; }
+  if (n === 6) acc = 0;
+  render(dt);
+  if (n > 0) for (const k in pressed) pressed[k] = false;
+  requestAnimationFrame(frame);
+}
+newGame();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
