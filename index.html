@@ -476,7 +476,7 @@ const EDEF = {
   bat: { img: SPR_BAT, hp: 3, r: 6, score: 100 },
   fairy: { img: SPR_FAIRY, hp: 16, r: 7, score: 300 },
   golem: { img: SPR_GOLEM, hp: 70, r: 10, score: 1500 },
-  boss: { img: SPR_BOSS1, hp: 1300, r: 14, score: 30000 },
+  boss: { img: SPR_BOSS1, hp: 900, r: 14, score: 30000 },
 };
 function spawn(type, x, y, extra) {
   const d = EDEF[type];
@@ -517,6 +517,7 @@ function director(dt) {
   stageT += dt;
   if (stageT >= BOSS_T) {
     warnT = 3; showBanner('WARNING', '夢魘女王 諾克緹娜 接近中', '#ff2e63', 3); sfx('warn');
+    drop(W / 2 - 30, 20, 'power'); drop(W / 2 + 30, 20, 'power'); drop(W / 2, 14, 'bomb'); // 決戰前的補給
     return;
   }
   spawnT -= dt;
@@ -618,6 +619,7 @@ function damageEnemy(e, dmg) {
   if (e.type === 'boss' && (e.inv > 0 || e.t < 2.5)) return;
   e.hp -= dmg; e.flash = 0.05;
   if (e.type === 'boss') {
+    score += 10 * dmg;
     if (bossPhase === 1 && e.hp <= e.maxHp / 2) { startPhase2(e); return; }
     if (e.hp <= 0) { bossDie(e); return; }
     if (Math.random() < 0.15) sfx('hit');
