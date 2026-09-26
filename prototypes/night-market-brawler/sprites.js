@@ -58,7 +58,7 @@ const TORSO = [
 ];
 
 // ================= 敵人：布偶裝混混 =================
-const MASCOT = { o: 0, p: 5, P: 4, w: 15, W: 7, e: 0, r: 10, k: 1, K: 2, b: 11, B: 3, g: 14, c: 6, C: 7, y: 8 };
+const MASCOT = { o: 0, p: 5, P: 4, w: 15, W: 7, e: 0, r: 10, R: 10, k: 1, K: 2, b: 11, B: 3, g: 14, c: 6, C: 7, y: 8, Y: 9, u: 2 };
 /** 兔兔布偶頭（大頭＋長耳朵、鈕扣眼、縫線嘴）。skin：主色／陰影色字元 */
 function rabbitHead(main, shade, mode) {
   const W = 17, H = 19;
@@ -121,6 +121,156 @@ const BIG_SHOE = ['.ooooo.', 'oppppPo', 'opppppo', '.ooooo.'];
 const BIG_SHOE_C = ['.ooooo.', 'occccCo', 'ocCccco', '.ooooo.'];
 const DRESS_SHOE = ['.ooooo.', 'okkkkko', 'oKkkkko', '.ooooo.'];
 
+// ================= 新增混混與守護者 =================
+/** 貓咪布偶頭（尖耳、鬍鬚） */
+function catHead(mode) {
+  const W = 17, H = 16;
+  let rows = grid(W, H, (x, y) => {
+    if (inEllipse(x, y, 8, 9.5, 7.6, 6)) return y > 12 || x < 3 ? 'g' : 'w';
+    if ((y >= 1 && y <= 5) && (Math.abs(x - 3.5) <= (y - 0.5) * 0.7 || Math.abs(x - 12.5) <= (y - 0.5) * 0.7)) return (x === 3 || x === 12) && y > 2 ? 'P' : 'w';
+    return '.';
+  });
+  rows = stamp(rows, mode === 'hurt' ? ['o.o...o.o', '.o.....o.', 'o.o...o.o'] : ['.C.....C.', 'CCo...CCo', '.C.....C.'], 4, 6);
+  rows = stamp(rows, ['.P.', 'o.o'], 7, 10);
+  rows = stamp(rows, ['oo.......oo', '..o.....o..'], 3, 11);
+  return outline(rows);
+}
+/** 狗狗布偶頭（垂耳） */
+function dogHead(mode) {
+  const W = 18, H = 17;
+  let rows = grid(W, H, (x, y) => {
+    if (inEllipse(x, y, 9, 9, 7, 6.8)) return y > 12 || x < 4 ? 'b' : 'y';
+    if (inEllipse(x, y, 2.5, 9, 2.2, 5) || inEllipse(x, y, 15.5, 9, 2.2, 5)) return 'b';
+    return '.';
+  });
+  rows = stamp(rows, ['.wwww.', 'wwwwww', '.wwww.'], 6, 10);
+  rows = stamp(rows, mode === 'hurt' ? ['o.o..o.o', '.o....o.', 'o.o..o.o'] : ['oo....oo', 'ow....ow'], 5, 6);
+  rows = stamp(rows, ['oo', 'P.'], 8, 11);
+  return outline(rows);
+}
+/** 熊貓頭（守護者：熊貓大仙） */
+function pandaHead(mode) {
+  const W = 23, H = 21;
+  let rows = grid(W, H, (x, y) => {
+    if (inEllipse(x, y, 11, 12, 10, 8.6)) return y > 17 ? 'g' : 'w';
+    if (inEllipse(x, y, 3.5, 4.5, 3.4, 3.4) || inEllipse(x, y, 18.5, 4.5, 3.4, 3.4)) return 'k';
+    return '.';
+  });
+  rows = stamp(rows, mode === 'hurt' ? ['kk.k.....k.kk', '.kk.......kk.', 'kk.k.....k.kk'] : ['.kkk.....kkk.', 'kkwkk...kkwkk', 'kkkk.....kkkk', '.kk.......kk.'], 5, 8);
+  rows = stamp(rows, ['.kkk.', 'kkkkk', '..k..'], 9, 13);
+  rows = stamp(rows, mode === 'rage' ? ['RRRRRRRRR'] : ['.o..o..o.'], 7, 17);
+  rows = stamp(rows, ['RRRRRRRRRRRRR'], 5, 1); // 紅頭巾
+  return outline(rows);
+}
+/** 大兔兔頭（守護者） */
+function bigRabbitHead(mode) {
+  const W = 27, H = 29;
+  let rows = grid(W, H, (x, y) => {
+    if (inEllipse(x, y, 13, 19, 12, 9.4)) return y > 24 || x < 4 ? 'P' : 'p';
+    if ((inEllipse(x, y, 7, 6, 2.8, 7) || inEllipse(x, y, 19, 5, 2.8, 7)) && y < 13) return x === 7 || x === 19 ? 'P' : 'p';
+    return '.';
+  });
+  rows = stamp(rows, ['..www..', '.wwwww.', 'wwwwwww', '.wwwww.'], 10, 21);
+  rows = stamp(rows, mode === 'hurt' ? ['o.o.......o.o', '.o.........o.', 'o.o.......o.o'] : ['ooo.......ooo', 'oRo.......oRo', 'ooo.......ooo'], 7, 14);
+  rows = stamp(rows, ['kkkkkkkkkkkkk', 'kCCkkkkkkkCCk'], 7, 12); // 墨鏡
+  rows = stamp(rows, ['o.o.o', '.ooo.'], 11, 25);
+  return outline(rows);
+}
+/** 珍奶巨人（杯身，52x60）：mode：idle / open / hurt */
+function bubbleTeaRows(mode) {
+  const W = 50, H = 62;
+  let rows = grid(W, H, (x, y) => {
+    if (y >= 8 && y <= 11 && x >= 6 && x <= 43) return y === 8 ? 'w' : 'C'; // 杯蓋
+    const top = 12, bot = 58, t = (y - top) / (bot - top);
+    const half = 18 - t * 4;
+    if (y >= top && y <= bot && Math.abs(x - 24.5) <= half) {
+      if (y > 44 && ((x * 3 + y * 5) % 11 < 3)) return 'k'; // 珍珠
+      if (y > 44) return 'K';
+      return x < 24.5 - half + 3 ? 'b' : 'y';
+    }
+    return '.';
+  });
+  // 吸管
+  for (let y = 0; y < 9; y++) rows = stamp(rows, ['PP'], 30 + Math.floor(y / 3), y);
+  // 臉
+  rows = stamp(rows, mode === 'hurt' ? ['o.o......o.o', '.o........o.', 'o.o......o.o'] : ['.oo......oo.', 'owwo....owwo', 'owoo....owoo', '.oo......oo.'], 13, 20);
+  rows = stamp(rows, mode === 'open' ? ['..oooooo..', '.oRRRRRRo.', '..oooooo..'] : ['..o....o..', '...oooo...'], 14, 28);
+  rows = stamp(rows, ['pp', 'pp'], 10, 27); rows = stamp(rows, ['pp', 'pp'], 36, 27);
+  return outline(rows);
+}
+/** 夾娃娃機大王（機台，56x66） */
+function clawMachineRows(mode) {
+  const W = 56, H = 66;
+  let rows = grid(W, H, (x, y) => {
+    if (y < 8 && x >= 4 && x <= 51) return y < 2 ? 'k' : (Math.floor(x / 4) % 2 ? 'P' : 'p'); // 招牌
+    if (y >= 8 && y < 44 && x >= 4 && x <= 51) { if (x <= 6 || x >= 49) return 'P'; return 'C'; } // 玻璃
+    if (y >= 44 && y < 64 && x >= 2 && x <= 53) return y === 44 ? 'w' : x <= 4 || x >= 51 ? 'P' : 'p';
+    return '.';
+  });
+  // 玻璃反光與裡面的布偶
+  for (let k = 0; k < 8; k++) rows = stamp(rows, ['w'], 10 + k, 10 + k);
+  rows = stamp(rows, ['.pp.pp.', 'ppppppp', 'pwpppwp', '.ppppp.'], 10, 36);
+  rows = stamp(rows, ['.cc.cc.', 'ccccccc', 'cwcccwc', '.ccccc.'], 30, 35);
+  rows = stamp(rows, ['.yy.', 'yyyy', 'ywyw'], 22, 38);
+  // 投幣口、按鈕（臉）
+  rows = stamp(rows, mode === 'hurt' ? ['o.o..........o.o', '.o............o.', 'o.o..........o.o'] : mode === 'angry' ? ['RR............RR', '.RR..........RR.', '..R..........R..'] : ['.oo..........oo.', 'oyyo........oyyo', '.oo..........oo.'], 20, 48);
+  rows = stamp(rows, ['kkkk', 'k..k', 'kkkk'], 26, 56);
+  return outline(rows);
+}
+// 道具與小吃
+const PROPS = { o: 0, k: 0, n: 1, u: 2, P: 3, p: 4, l: 5, c: 6, C: 7, y: 8, Y: 9, R: 10, b: 11, s: 12, S: 13, g: 14, w: 15 };
+const CHAIR = outline([
+  '............',
+  '.RRRRRRRRRR.',
+  '.RlRRRRRRRR.',
+  '.RRRRRRRRRR.',
+  '.R........R.',
+  '.RRRRRRRRRR.',
+  '.RlllllllRR.',
+  '.RRRRRRRRRR.',
+  '..R......R..',
+  '..R......R..',
+  '.RR......RR.',
+  '............',
+]);
+const TRASH = outline([
+  '..........',
+  '.gggggggg.',
+  '.wwwwwwww.',
+  '..gugugu..',
+  '..gugugu..',
+  '..gugugu..',
+  '..gugugu..',
+  '..gugugu..',
+  '..gggggg..',
+  '..........',
+]);
+const CRATE = outline([
+  '..............',
+  '.bbbbbbbbbbbb.',
+  '.bYbbbbbbbbYb.',
+  '.bbYbbbbbbYbb.',
+  '.bbbYbbbbYbbb.',
+  '.bbbbYbbYbbbb.',
+  '.bbbbbYYbbbbb.',
+  '.bbbbYbbYbbbb.',
+  '.bbbYbbbbYbbb.',
+  '.bbbbbbbbbbbb.',
+  '..............',
+]);
+const FOOD = {
+  chicken: ['...bbbb...', '..bYYYYb..', '.bYYbYYYb.', '.bYYYYbYb.', '.bYbYYYYb.', '..bYYYYb..', '...bwwb...', '....ww....'],
+  candy: ['..R.', '.RwR', '.RRR', '.RwR', '.RRR', '.RwR', '..b.', '..b.'],
+  mango: ['..yyyy..', '.yyYyyy.', 'yyyyyYyy', 'wwwwwwww', '.cccccc.', '..cccc..', '...cc...'],
+  tea: ['...PP...', '...P....', '.wwwwww.', '.CCCCCC.', '.yyyyyy.', '.yykyky.', '.ykykyk.', '..kkkk..'],
+  sausage: ['..RR..', '.RlRR.', '.RlRR.', '.RRRR.', '.RRRR.', '.RRRR.', '..RR..', '..bb..', '..bb..'],
+  tofu: ['.YYY.YYY.', '.YyY.YyY.', '.YYY.YYY.', '...YYY...', '...YyY...', 'wwwwwwwww', '.ggggggg.'],
+};
+const TOKEN = ['.oooo.', 'oyyyyo', 'oyRyyo', 'oyyRyo', 'oYyyYo', '.oooo.'];
+const POINT = ['..y..', '.yyy.', 'yywyy', '.yyy.', '..y..'];
+
+export const FOOD_IDS = Object.keys(FOOD);
+
 export function buildSprites() {
   const mk = (rows, legend) => new Sprite(rows, legend, PALETTE);
   const lie = s => mk(rotateRows(rotateRows(rotateRows(s.rows))), s.legend);
@@ -138,5 +288,16 @@ export function buildSprites() {
     amang, rabbit, trainee, bear,
     fist: mk(FIST, PARTS), shoe: mk(SHOE, PARTS), mitten: mk(MITTEN, PARTS), paw: mk(PAW, PARTS),
     bigShoe: mk(BIG_SHOE, PARTS), bigShoeC: mk(BIG_SHOE_C, PARTS), dressShoe: mk(DRESS_SHOE, PARTS),
+    cat: withLie({ head: M(catHead('normal')), headHurt: M(catHead('hurt')), torso: M(suitTorso('w', 'g', ['CC', 'CC', 'CC'])) }),
+    dog: withLie({ head: M(dogHead('normal')), headHurt: M(dogHead('hurt')), torso: M(suitTorso('y', 'b', ['ww', 'ww', 'ww'])) }),
+    boss1: withLie({ head: M(bigRabbitHead('normal')), headHurt: M(bigRabbitHead('hurt')), torso: M(SUIT) }),
+    panda: withLie({ head: M(pandaHead('normal')), headHurt: M(pandaHead('hurt')), headShout: M(pandaHead('rage')), torso: M(suitTorso('w', 'g', ['kk', 'kk', 'kk'])) }),
+    bubbleTea: { idle: M(bubbleTeaRows('idle')), open: M(bubbleTeaRows('open')), hurt: M(bubbleTeaRows('hurt')) },
+    clawMachine: { idle: M(clawMachineRows('idle')), angry: M(clawMachineRows('angry')), hurt: M(clawMachineRows('hurt')) },
+    blackShoe: mk(['.ooooo.', 'okkkkko', 'oKkkkko', '.ooooo.'], { ...PARTS, k: 0, K: 1 }), whitePaw: mk(['.oo.', 'owwo', 'owwo', '.oo.'], PARTS),
+    chair: mk(CHAIR, PROPS), trash: mk(TRASH, PROPS), crate: mk(CRATE, PROPS),
+    food: Object.fromEntries(FOOD_IDS.map(id => [id, mk(outline(['.'.repeat(FOOD[id][0].length + 2), ...FOOD[id].map(r => '.' + r + '.'), '.'.repeat(FOOD[id][0].length + 2)]), PROPS)])),
+    token: mk(TOKEN, { ...PROPS, o: 0 }), point: mk(outline(['.......', ...POINT.map(r => '.' + r + '.'), '.......']), PROPS),
   };
+  function withLie(o) { o.torsoLie = lie(o.torso); o.headLie = lie(o.headHurt); return o; }
 }
