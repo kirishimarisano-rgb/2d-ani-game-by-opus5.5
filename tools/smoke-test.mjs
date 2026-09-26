@@ -29,7 +29,27 @@ const GAME_CHECKS = {
     await page.waitForTimeout(150);
     ok(await page.evaluate(() => state === 'pause' && !PixelArcade.backButton.hidden), '暫停時顯示返回按鈕');
   },
+  'moon-kagura': page => stageCheck(page, 'moon-kagura', 'play', d => d.startStage(0)),
+  'greenhouse-witch': page => stageCheck(page, 'greenhouse-witch', 'run', d => d.startRun()),
+  'night-market-brawler': page => stageCheck(page, 'night-market-brawler', 'play', d => d.startStage(0)),
 };
+
+// 以原型引擎做的完整遊戲：直接開始第一關，無敵狀態下隨機操作一段時間，並確認有寫入存檔
+async function stageCheck(page, id, playScene, start) {
+  const scene = await page.evaluate(([src]) => {
+    const X = window.__proto;
+    X.tuner.set('godMode', true);
+    (0, eval)(src)(X.game.debug);
+    X.advance(30);
+    return X.game.debug.scene;
+  }, [start.toString()]);
+  ok(scene === playScene, `可以直接開始第一關（場景：${scene}）`);
+  const bad = await page.evaluate(() => window.__proto.fuzz(600, { attack: 0.5, right: 0.4, pause: 0 }));
+  ok(bad === 0, '遊玩中隨機操作 10 秒，畫面仍在 16 色調色盤內', `超出調色盤的像素：${bad}`);
+  const saved = await page.evaluate(k => { try { return !!localStorage.getItem(k); } catch (e) { return false; } }, `stardust/${id}/save`);
+  ok(saved, '進度已寫入存檔（localStorage）');
+  await page.evaluate(() => window.__proto.tuner.set('godMode', false));
+}
 
 // 原型共用的引擎檢查（引擎在 window.__proto 提供除錯介面）
 async function protoChecks(page) {
@@ -88,7 +108,8 @@ try {
     ok(await page.evaluate(() => !!document.querySelector('canvas')), '畫面（canvas）存在');
     const back = await page.evaluate(() => { const a = document.querySelector('a.pa-back'); return a && a.href; });
     ok(back === server.url, '有「返回遊戲選單」按鈕且指向啟動器', `實際：${back}`);
-    if (e.kind === 'proto') await protoChecks(page);
+    // 以原型引擎做的遊戲（和原型一樣提供 window.__proto）一律做引擎檢查
+    if (e.kind === 'proto' || await page.evaluate(() => !!window.__proto)) await protoChecks(page);
     if (GAME_CHECKS[e.id]) await GAME_CHECKS[e.id](page);
     // 點擊返回（若遊戲把按鈕藏起來，先讓它顯示）
     await page.evaluate(() => { window.PixelArcade && PixelArcade.setBackVisible(true); });

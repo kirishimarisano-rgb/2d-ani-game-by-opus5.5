@@ -1583,7 +1583,7 @@ export function createWorld(env) {
     hudOff = true; banner = null;
     doors = [];
     props = [];
-    pl.x = 10 * T; pl.y = 8 * T + 8; pl.aim = 0; setFacing(0);
+    pl.x = 10 * T; pl.y = 8 * T + 8; pl.aim = 0; pl.inv = 0; setFacing(0);
     const add = (t, x, y, o = {}) => { const e = makeEnemy(t, x, y); e.spawnT = 0; e.stateT = 9; Object.assign(e, o); enemies.push(e); };
     add('slime', pl.x + 21, pl.y - 1); add('mushroom', pl.x + 58, pl.y - 26); add('beetle', pl.x - 44, pl.y + 12, { dirX: 1, dirY: 0 }); add('bee', pl.x + 40, pl.y + 20);
     cam.center(pl.x + 8, pl.y - 12);

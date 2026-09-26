@@ -10,23 +10,18 @@
 
 ## 🎮 收錄遊戲
 
-| 遊戲 | 類型 | 操作 | 連結 |
-| --- | --- | --- | --- |
-| 星織魔法少女 艾菈<br>STARLIGHT AIRA | 縱向捲軸彈幕射擊 | 鍵盤、觸控 | [遊玩](https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/games/magical-shooter/) · [說明](games/magical-shooter/README.md) |
+| 遊戲 | 類型 | 內容 | 操作 | 連結 |
+| --- | --- | --- | --- | --- |
+| 星織魔法少女 艾菈<br>STARLIGHT AIRA | 縱向捲軸彈幕射擊 | 約 40 分鐘的彈幕射擊，兩階段 Boss | 鍵盤、觸控 | [遊玩](https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/games/magical-shooter/) · [說明](games/magical-shooter/README.md) |
+| 月下神樂<br>MOONLIT KAGURA | 橫向動作平台（銀河惡魔城 Lite） | 4 個區域、4 隻守護妖、3 種移動能力、8 種御守、金鈴收集、茶屋 | 鍵盤、手把、觸控 | [遊玩](https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/prototypes/moon-kagura/) |
+| 溫室魔女的剪定日<br>PRUNE & BLOOM | 俯視角動作 Roguelite | 3 層樓、隨機房間、16 種祝福、3 把武器、溫室小屋永久強化 | 鍵盤、滑鼠、手把、觸控 | [遊玩](https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/prototypes/greenhouse-witch/) |
+| 夜市拳姬<br>NIGHT MARKET BRAWLER | 清版格鬥 | 4 條街道、4 隻守護者、抓投與椅子、必殺技、評價與修行、小吃攤 | 鍵盤、手把、觸控 | [遊玩](https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/prototypes/night-market-brawler/) |
 
-## 🧪 原型試玩：第二款遊戲的前期探索
+後面三款是從「第二款遊戲」的三個手感原型長成的完整遊戲（網址沿用原型時期的網址，舊連結仍然有效）。每款都有標題畫面、地圖或據點、多個關卡與 Boss、成長系統、背景音樂、對話，並把進度自動存在瀏覽器裡。各遊戲的內容、系統與操作，以及最初的概念設計，請見 **[prototypes/README.md](prototypes/README.md)**。
 
-三個不同類型的概念，各做了一個只有一個場景的手感原型。每個原型都有**調參面板**（速度、加速度、跳躍、擊退、打擊停頓……），可以即時調整、存成 A/B 比較，或複製成 JSON。
+這三款仍然保留原型時期的**調參面板**（畫面右上角「調參面板」按鈕，或 <kbd>`</kbd> 鍵）：速度、跳躍、擊退、打擊停頓、難度倍率……都可以即時調整、存成 A/B 比較，或複製成 JSON；「輕鬆模式」預設可以降低難度。
 
-| 原型 | 類型 | 要感受的手感 | 試玩 |
-| --- | --- | --- | --- |
-| A《月下神樂》 | 橫向動作平台 | 跳躍弧線、三段連擊（鈴聲升調）、下劈彈跳 | [▶ 試玩](https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/prototypes/moon-kagura/) |
-| B《溫室魔女的剪定日》 | 俯視角動作 Roguelite | 八方向移動、翻滾與完美閃避、蓄力迴旋、撞牆連鎖 | [▶ 試玩](https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/prototypes/greenhouse-witch/) |
-| C《夜市拳姬》 | 清版格鬥 | 四段連擊、浮空追擊、衝擊格、霸體敵人 | [▶ 試玩](https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/prototypes/night-market-brawler/) |
-
-三個概念的核心玩法循環、成長系統、手感重點與畫面風格，以及調參面板的用法，請見 **[prototypes/README.md](prototypes/README.md)**。
-
-原型共通規格：固定 320×180 低解析度、整數倍放大；每個原型限定 16 色調色盤（冒煙測試會逐像素檢查）；角色有待機、移動、跳躍／翻滾、攻擊、受擊等基本動畫；所有角色與美術皆為原創。
+共通規格：固定 320×180 低解析度、整數倍放大；每款限定 16 色調色盤（冒煙測試會逐像素檢查）；中文文字也是點陣化後再以調色盤上色；所有角色與美術皆為原創，背景音樂與音效以 Web Audio 即時合成。
 
 ## ➕ 新增一款遊戲
 
@@ -68,7 +63,7 @@
 | `controls` | | 支援的操作：`keyboard`、`touch`、`gamepad`、`mouse` |
 | `highScoreKey` | | 遊戲存最高分用的 localStorage 鍵，啟動器會在卡片上顯示 |
 | `badge` | | 封面左上角的小標籤（例如 `NEW`） |
-| `concept` | | 原型專用：`loop`、`growth`、`feel`、`style` 四段概念摘要 |
+| `concept` | | 選用：`loop`、`growth`、`feel`、`style` 四段概念摘要（原型卡片會顯示） |
 
 清單分成 `games`（正式遊戲）與 `prototypes`（原型試玩）兩區，啟動器會分區顯示；某一區沒有項目時會自動隱藏。原型卡片會顯示 `concept` 裡的概念摘要。
 
@@ -83,10 +78,10 @@ shared/
 games/
   magical-shooter/      星織魔法少女 艾菈（單一 index.html）
 prototypes/
-  engine/               原型共用引擎：像素渲染、輸入、調參面板、音效、特效
-  moon-kagura/          原型 A《月下神樂》
-  greenhouse-witch/     原型 B《溫室魔女的剪定日》
-  night-market-brawler/ 原型 C《夜市拳姬》
+  engine/               共用引擎：像素渲染、點陣中文字、輸入、UI、存檔、音樂、調參面板、特效
+  moon-kagura/          《月下神樂》
+  greenhouse-witch/     《溫室魔女的剪定日》
+  night-market-brawler/ 《夜市拳姬》
 tools/
   smoke-test.mjs        冒煙測試（含逐像素調色盤檢查）
   make-covers.mjs       封面產生器（從遊戲本身的像素圖／畫面產生）
@@ -106,6 +101,6 @@ python3 -m http.server 8000
 
 ```bash
 npm install && npx playwright install chromium   # 第一次使用時
-npm test             # 冒煙測試：逐一開啟啟動器、每款遊戲與原型並檢查
+npm test             # 冒煙測試：逐一開啟啟動器與每款遊戲並檢查（含直接開始第一關、隨機操作、存檔）
 npm run covers       # 重新產生封面
 ```

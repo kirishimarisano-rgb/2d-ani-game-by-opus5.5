@@ -680,7 +680,7 @@ function create(ctx) {
     peek: () => ({ scene, overlay: !!overlay, dialog: dialog.open, ...(scene === 'play' ? world.peek() : {}) }),
     // 測試用：直接進入某一關、跳到守護妖
     debug: {
-      startStage: i => { D().started = true; startStage(i); },
+      startStage: i => { D().started = true; trans.phase = null; trans.cb = null; dialog.lines = null; startStage(i); },
       boss: () => world.debugBoss(),
       world, save,
       get scene() { return scene; },

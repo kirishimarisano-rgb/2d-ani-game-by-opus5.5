@@ -601,7 +601,7 @@ function create(ctx) {
     debugLines: () => scene === 'run' ? world.debugLines() : [`SCENE ${scene.toUpperCase()}`],
     peek: () => ({ scene, overlay: !!overlay, dialog: dialog.open, run, ...(scene === 'run' ? world.peek() : {}) }),
     debug: {
-      startRun: () => { D().seenIntro = true; startRun(); },
+      startRun: () => { D().seenIntro = true; trans.phase = null; trans.cb = null; dialog.lines = null; startRun(); },
       clearRoom: () => world.debugClear(),
       goRoom: opt => nextRoom(opt),
       world, save,

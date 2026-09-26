@@ -800,7 +800,7 @@ function create(ctx) {
     debugLines: () => scene === 'play' ? world.debugLines() : [`SCENE ${scene.toUpperCase()}`],
     peek: () => ({ scene, overlay: !!overlay, dialog: dialog.open, ...(scene === 'play' ? world.peek() : {}) }),
     debug: {
-      startStage: i => { STAGES.forEach(s => { D().seenStage[s.id] = true; }); D().seenIntro = true; startStage(i); },
+      startStage: i => { STAGES.forEach(s => { D().seenStage[s.id] = true; }); D().seenIntro = true; trans.phase = null; trans.cb = null; dialog.lines = null; startStage(i); },
       boss: () => world.debugBoss(),
       clearZone: () => world.debugClearZone(),
       toMap: () => enterMap(),
