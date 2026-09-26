@@ -173,7 +173,7 @@ function create({ screen: g, input, sound, P }) {
   const world = buildWorldLayer();
   const parts = new Particles(900), floats = new Floaters(), shake = new Shaker(), cam = new Camera(W, H);
   cam.bounds = { w: WW, h: WH };
-  let pl, enemies, hitstop, combo, comboT, time, hintT, ambientT, lastHit;
+  let pl, enemies, hitstop, combo, comboT, time, hintT, ambientT, lastHit, hudOff = false;
 
   // ---------------- 音效 ----------------
   const sfx = {
@@ -882,7 +882,7 @@ function create({ screen: g, input, sound, P }) {
     parts.draw(g, p => !(p.colors[0] === C.dgreen && !p.petal));
     floats.draw(g);
     if (P.showHitbox) drawHitboxes();
-    drawHUD();
+    if (!hudOff) drawHUD();
   }
   function debugLines() {
     const a = pl.atk;
@@ -896,9 +896,11 @@ function create({ screen: g, input, sound, P }) {
   /** 封面構圖：主角在稻草人前揮出終結技 */
   function stageCover() {
     reset();
-    pl.x = 4 * T + 8 + 22; pl.face = -1; hintT = 0;
-    cam.center(pl.x - 40, pl.y - 40);
-    startAttack('g3'); pl.atk.f = pl.atk.S + pl.atk.A - 1;
+    hudOff = true; hintT = 0;
+    pl.x = 4 * T + 8 + 24; pl.face = -1;
+    cam.center(pl.x - 10, pl.y - 36);
+    for (let i = 0; i < 40; i++) updateRopes(1 / 60); // 讓緞帶先自然垂下
+    startAttack('g3');
   }
 
   reset();

@@ -150,7 +150,7 @@ function create({ screen: g, input, sound, P }) {
   const floor = buildFloor();
   const parts = new Particles(900), floats = new Floaters(), shake = new Shaker(), cam = new Camera(W, H);
   cam.bounds = { w: WW, h: WH };
-  let pl, enemies, pots, spores, vines, waves, bursts, pickups, hitstop, time, kills, wave, waveBanner, spawnT, hintT, combo, comboT, lastHit;
+  let pl, enemies, pots, spores, vines, waves, bursts, pickups, hitstop, time, kills, wave, waveBanner, spawnT, hintT, combo, comboT, lastHit, hudOff = false;
   const mouse = { x: 0, y: 0, inside: false };
   g.view.addEventListener('pointermove', e => { const p = g.toNative(e.clientX, e.clientY); mouse.x = p.x; mouse.y = p.y; mouse.inside = true; });
   g.view.addEventListener('pointerdown', e => {
@@ -908,7 +908,7 @@ function create({ screen: g, input, sound, P }) {
     parts.draw(g);
     floats.draw(g);
     if (P.showHitbox) drawHitboxes();
-    drawHUD();
+    if (!hudOff) drawHUD();
   }
   function debugLines() {
     const a = pl.atk;
@@ -921,13 +921,14 @@ function create({ screen: g, input, sound, P }) {
   }
   function stageCover() {
     reset();
-    P.enemyAggro = P.enemyAggro; // 保持設定
-    pl.x = 15 * T; pl.y = 13 * T; pl.aim = 0; setFacing(0);
-    enemies.push(Object.assign(makeEnemy('slime', pl.x + 22, pl.y - 2), { spawnT: 0 }));
-    enemies.push(Object.assign(makeEnemy('mushroom', pl.x + 60, pl.y - 30), { spawnT: 0 }));
-    enemies.push(Object.assign(makeEnemy('beetle', pl.x - 50, pl.y + 10), { spawnT: 0, dirX: 1, dirY: 0 }));
-    cam.center(pl.x + 10, pl.y - 20);
-    startAttack('c1');
+    hudOff = true; hintT = 0; waveBanner = 0; spawnT = 99;
+    pl.x = 10 * T; pl.y = 10 * T + 8; pl.aim = 0; setFacing(0);
+    enemies.push(Object.assign(makeEnemy('slime', pl.x + 21, pl.y - 1), { spawnT: 0, stateT: 9 }));
+    enemies.push(Object.assign(makeEnemy('mushroom', pl.x + 58, pl.y - 26), { spawnT: 0, stateT: 9 }));
+    enemies.push(Object.assign(makeEnemy('beetle', pl.x - 44, pl.y + 12), { spawnT: 0, dirX: 1, dirY: 0, stateT: 9 }));
+    enemies.push(Object.assign(makeEnemy('slime', pl.x + 40, pl.y + 20), { spawnT: 0, stateT: 9 }));
+    cam.center(pl.x + 8, pl.y - 12);
+    startAttack('c1'); pl.atk.f = pl.atk.S;
   }
 
   reset();

@@ -146,7 +146,7 @@ function create({ screen: g, input, sound, P }) {
   const bg = buildBackground();
   const parts = new Particles(900), floats = new Floaters(), shake = new Shaker(), cam = new Camera(W, H);
   cam.bounds = { w: WW, h: H };
-  let pl, enemies, hitstop, time, combo, comboT, lastHit, bestCombo, impactT, target, spawnT, tapDir, tapT, hintT, rankText;
+  let pl, enemies, hitstop, time, combo, comboT, lastHit, bestCombo, impactT, target, spawnT, tapDir, tapT, hintT, rankText, hudOff = false;
 
   // ---------------- 音效 ----------------
   const sfx = {
@@ -416,7 +416,7 @@ function create({ screen: g, input, sound, P }) {
     e.shakeT = hitstop;
     pl.shakeT = 0;
     shake.add(fin ? P.shakeFinisher : P.shake, fin ? 280 : 140, dir, fin && m.launch ? -1 : 0);
-    if (fin && P.impactFrame) impactT = 3 / 60;
+    if (fin && P.impactFrame && !hudOff) impactT = 3 / 60;
     // 火花
     // 火花位置：敵人身體靠攻擊方向的一側，高度取招式判定的中段
     const hx = e.x - dir * 5;
@@ -755,7 +755,7 @@ function create({ screen: g, input, sound, P }) {
       g.rect(sx, 64, 3, H - 64, C.ink);
       g.rect(sx - 5, 60, 13, 5, C.ink); g.rect(sx - 4, 61, 11, 2, C.yellow);
     }
-    drawHUD();
+    if (!hudOff) drawHUD();
   }
   function debugLines() {
     const a = pl.atk;
@@ -768,11 +768,14 @@ function create({ screen: g, input, sound, P }) {
   }
   function stageCover() {
     reset();
-    P.enemyAggro = P.enemyAggro;
+    hudOff = true; hintT = 0; spawnT = 99;
     const e = enemies[0];
-    e.x = pl.x + 18; e.y = pl.y;
+    e.x = pl.x + 17; e.y = pl.y;
+    const bun = makeEnemy('rabbit', pl.x - 34, pl.y - 6); bun.face = 1; bun.state = 'wind'; bun.stateT = 9; bun.cd = 9;
+    const bear = makeEnemy('bear', pl.x + 62, pl.y + 10); bear.face = -1; bear.cd = 9;
+    enemies.push(bun, bear);
     startMove('upper'); pl.atk.f = pl.atk.S;
-    cam.center(pl.x + 40, H / 2);
+    cam.center(pl.x + 14, H / 2);
   }
 
   reset();

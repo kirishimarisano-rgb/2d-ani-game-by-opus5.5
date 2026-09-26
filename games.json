@@ -9,9 +9,80 @@
       "path": "games/magical-shooter/",
       "cover": "games/magical-shooter/cover.png",
       "accent": "#ff5fa2",
-      "controls": ["keyboard", "touch"],
+      "controls": [
+        "keyboard",
+        "touch"
+      ],
       "highScoreKey": "aira_hi"
     }
   ],
-  "prototypes": []
+  "prototypes": [
+    {
+      "id": "moon-kagura",
+      "title": "月下神樂",
+      "subtitle": "MOONLIT KAGURA",
+      "genre": "原型 A・橫向動作平台",
+      "description": "巫女緋鈴揮舞神樂鈴杖驅散妖怪。測試跳躍弧線、三段連擊、下劈彈跳與打擊停頓。",
+      "path": "prototypes/moon-kagura/",
+      "cover": "prototypes/moon-kagura/cover.png",
+      "accent": "#ffd66b",
+      "controls": [
+        "keyboard",
+        "gamepad",
+        "touch"
+      ],
+      "badge": "PROTO A",
+      "concept": {
+        "loop": "探索相連的神社區域 → 擊敗守護妖 → 學會新的神樂之舞 → 回頭打開先前過不去的路（銀河惡魔城式）。",
+        "growth": "移動能力當作地圖鑰匙（二段跳、空中衝刺、下劈、壁跳、滑翔）＋御守裝備格＋收集鈴鐺提高 HP 與靈力。",
+        "feel": "精準又寬容的跳躍（可變高度、土狼時間、輸入緩衝、頂點滯空）；命中鈴聲沿五聲音階升調，連段即旋律；下劈彈跳。",
+        "style": "夜色藍紫＋朱紅＋燈籠金 16 色；大月亮與多層視差、櫻花與靈火；鈴杖與緞帶以程式繪製並有繩索物理。"
+      }
+    },
+    {
+      "id": "greenhouse-witch",
+      "title": "溫室魔女的剪定日",
+      "subtitle": "PRUNE & BLOOM",
+      "genre": "原型 B・俯視角動作 Roguelite",
+      "description": "見習魔女茴香用園藝鐮刀修剪暴走的植物魔物。測試八方向移動、翻滾與完美閃避、揮砍與蓄力迴旋。",
+      "path": "prototypes/greenhouse-witch/",
+      "cover": "prototypes/greenhouse-witch/cover.png",
+      "accent": "#c6e38a",
+      "controls": [
+        "keyboard",
+        "mouse",
+        "gamepad",
+        "touch"
+      ],
+      "badge": "PROTO B",
+      "concept": {
+        "loop": "進入房間 → 清完敵人 → 三選一獲得祝福 → 選擇下一個房間 → 樓層 Boss；失敗後用種子做永久強化再挑戰。",
+        "growth": "局內祝福（原型已可試玩：荊棘衝刺、新月剪、花粉爆裂）與祝福組合；局外在溫室小屋種出永久強化、解鎖新武器。",
+        "feel": "八方向加減速與轉身、翻滾爆發曲線與無敵時段、完美閃避子彈時間、三段揮砍＋蓄力迴旋、打飛撞牆撞敵的連鎖。",
+        "style": "白天暖色溫室：陶土、嫩葉、玻璃青 16 色；俯視 3/4 視角、斜射抖動光帶；嫩葉色刀光與飛散葉片。"
+      }
+    },
+    {
+      "id": "night-market-brawler",
+      "title": "夜市拳姬",
+      "subtitle": "NIGHT MARKET BRAWLER",
+      "genre": "原型 C・清版格鬥",
+      "description": "阿芒在夜市擊退穿布偶裝的混混。測試四段連擊、上勾拳浮空追擊、飛踢滑壘與霸體敵人。",
+      "path": "prototypes/night-market-brawler/",
+      "cover": "prototypes/night-market-brawler/cover.png",
+      "accent": "#ff9ec4",
+      "controls": [
+        "keyboard",
+        "gamepad",
+        "touch"
+      ],
+      "badge": "PROTO C",
+      "concept": {
+        "loop": "沿夜市街道推進 → 一波波布偶混混 → 連段、浮空追擊、場景物件清場 → 街尾 Boss → 關卡評分 → 下一條街（可雙人）。",
+        "growth": "用關卡評分解鎖新招式（投技、蓄力拳、空中連段）＋每關一樣夜市小吃增益＋角色等級提高 HP 與特殊技量表。",
+        "feel": "連段節奏與接招時機、浮空追擊（浮空重力／托高／上限）、停頓隨連段累加、終結技衝擊格、出手權群戰節奏、霸體敵人。",
+        "style": "霓虹粉＋青＋燈籠黃夜市 16 色；遮雨棚、霓虹招牌、燈籠串、水窪倒影；骨架＋像素線條四肢，招式可擺姿勢並補間。"
+      }
+    }
+  ]
 }

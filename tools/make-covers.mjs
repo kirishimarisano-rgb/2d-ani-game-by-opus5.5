@@ -59,6 +59,28 @@ const COVERS = {
   },
 };
 
+// 原型的封面：呼叫原型自己的 stageCover() 擺出一個動作瞬間，擷取原生解析度畫面並以主角為中心裁切
+const protoCover = (id, frames) => ({
+  page: `prototypes/${id}/`,
+  out: `prototypes/${id}/cover.png`,
+  compose: async ({ W, H, frames }) => {
+    const X = window.__proto;
+    X.setPaused(true);
+    X.game.stageCover();
+    X.advance(frames);
+    const s = X.screen, pl = X.game.peek().pl;
+    const px = pl.x - s.camX, py = pl.y - (pl.z || 0) - s.camY - 12;
+    const cx = Math.round(Math.min(Math.max(px - W / 2, 0), s.w - W)), cy = Math.round(Math.min(Math.max(py - H / 2, 0), s.h - H));
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    c.getContext('2d').drawImage(s.buf, cx, cy, W, H, 0, 0, W, H);
+    return c.toDataURL('image/png');
+  },
+  frames,
+});
+COVERS['moon-kagura'] = protoCover('moon-kagura', 8);
+COVERS['greenhouse-witch'] = protoCover('greenhouse-witch', 5);
+COVERS['night-market-brawler'] = protoCover('night-market-brawler', 4);
+
 export async function makeCovers(ids = Object.keys(COVERS)) {
   const server = await serve(ROOT);
   const { browser } = await launchBrowser();
@@ -70,7 +92,7 @@ export async function makeCovers(ids = Object.keys(COVERS)) {
       await page.goto(server.url + def.page, { waitUntil: 'load' });
       await page.waitForTimeout(400);
       if (def.prepare) await def.prepare(page);
-      const dataUrl = await page.evaluate(def.compose, { W: COVER_W, H: COVER_H });
+      const dataUrl = await page.evaluate(def.compose, { W: COVER_W, H: COVER_H, frames: def.frames || 0 });
       const out = path.join(ROOT, def.out);
       fs.writeFileSync(out, Buffer.from(dataUrl.split(',')[1], 'base64'));
       console.log('封面已產生：', path.relative(ROOT, out));
