@@ -22,7 +22,8 @@ export class Input {
     }
     this.keysHeld = new Set();
     this.qPress = new Set(); this.qRelease = new Set();
-    this.state = {}; this.pressedNow = {}; this.releasedNow = {}; this.holdT = {};
+    this.state = {}; this.pressedNow = {}; this.releasedNow = {}; this.holdT = {}; this.repeatNow = {};
+    this.tapQ = []; this.taps = []; // 點擊／觸控畫面（原生座標），選單用
     this.touchHeld = new Set();
     this.touchAxis = { x: 0, y: 0 };
     this.padAxis = { x: 0, y: 0 };
@@ -78,10 +79,31 @@ export class Input {
       this.pressedNow[a] = (d && !was) || this.qPress.has(a);
       this.releasedNow[a] = (!d && was) || this.qRelease.has(a);
       this.state[a] = d;
-      this.holdT[a] = d ? (this.holdT[a] || 0) + dt : 0;
+      const h0 = this.holdT[a] || 0;
+      this.holdT[a] = d ? h0 + dt : 0;
+      // 按住時自動連發（選單移動用）：0.3 秒後每 0.085 秒一次
+      const R0 = 0.3, RI = 0.085;
+      this.repeatNow[a] = this.pressedNow[a] || (d && h0 + dt > R0 && Math.floor((h0 + dt - R0) / RI) !== Math.floor((h0 - R0) / RI) && h0 > R0 - dt);
     }
     this.qPress.clear(); this.qRelease.clear();
+    this.taps = this.tapQ; this.tapQ = [];
   }
+  /** 讓畫布上的點擊變成選單可用的座標（只接受直接點在遊戲畫面上的操作） */
+  attachPointer(host, screen) {
+    host.addEventListener('pointerdown', e => {
+      if (e.target !== screen.view && e.target !== host) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const p = screen.toNative(e.clientX, e.clientY);
+      if (p.x >= 0 && p.y >= 0 && p.x < screen.w && p.y < screen.h) this.tapQ.push({ x: p.x, y: p.y, touch: e.pointerType !== 'mouse' });
+      if (e.pointerType !== 'mouse') this.lastDevice = 'touch';
+    });
+  }
+  /** 這一格已經被選單等處理過：清掉按下事件與點擊，避免同一次按鍵又觸發遊戲動作 */
+  eat() {
+    for (const a of this.actions) { this.pressedNow[a] = false; this.repeatNow[a] = false; }
+    this.taps = [];
+  }
+  repeat(a) { return !!this.repeatNow[a]; }
   down(a) { return !!this.state[a]; }
   pressed(a) { return !!this.pressedNow[a]; }
   released(a) { return !!this.releasedNow[a]; }
@@ -105,8 +127,9 @@ export class Input {
  * 只在觸控裝置上顯示。
  */
 export class TouchControls {
-  constructor(host, input, buttons) {
+  constructor(host, input, buttons, o = {}) {
     this.input = input;
+    this.wanted = true; this.enabled = false;
     const root = document.createElement('div');
     root.className = 'pa-touch';
     root.hidden = true;
@@ -143,8 +166,24 @@ export class TouchControls {
       el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
       box.appendChild(el);
     }
-    const show = () => { root.hidden = false; };
+    if (o.pause) { // 右上角暫停鍵
+      const pb = document.createElement('div');
+      pb.className = 'pa-tpause';
+      pb.textContent = 'Ⅱ';
+      pb.addEventListener('pointerdown', e => { e.preventDefault(); input.qPress.add(o.pause); input.qRelease.add(o.pause); input.lastDevice = 'touch'; });
+      root.appendChild(pb);
+    }
+    const show = () => { this.enabled = true; this._sync(); };
     if (matchMedia('(pointer: coarse)').matches) show();
     addEventListener('touchstart', show, { once: true, passive: true });
   }
+  _sync() { this.root.hidden = !(this.enabled && this.wanted); }
+  /** 選單畫面收起虛擬按鍵，讓點擊直接落在畫面上 */
+  setVisible(v) {
+    if (this.wanted === v) return;
+    this.wanted = v;
+    if (!v) { this.input.touchHeld.clear(); this.input.touchAxis = { x: 0, y: 0 }; this.root.querySelectorAll('.on').forEach(e => e.classList.remove('on')); }
+    this._sync();
+  }
+  get active() { return this.enabled; }
 }

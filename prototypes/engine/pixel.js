@@ -1,6 +1,7 @@
 // 像素渲染核心：固定低解析度緩衝區 + 整數倍放大 + 16 色調色盤。
 // 所有繪圖函式都只接受「調色盤索引」，保證畫面永遠不會出現調色盤以外的顏色。
 import { FONT_5x7, FONT_3x5, glyphCanvas, measureText } from '../../shared/pixel-font.js';
+import { drawLabel } from './text.js';
 
 export const TAU = Math.PI * 2;
 export const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
@@ -141,6 +142,30 @@ export class Painter {
     if (o.shadow != null) this._text(str, x0 + sc, y0 + sc, font, sp, o.shadow, sc);
     this._text(str, x0, y0, font, sp, c, sc);
     return w;
+  }
+  /** 中文等系統字型文字（二值化成調色盤單色），o: { size, bold, align, outline, shadow, scale } */
+  label(str, x, y, c, o) { return drawLabel(this, str, x, y, c, o); }
+  /**
+   * 快速有序抖動：用 4x4 圖樣一次填滿（大面積淡入淡出、暗角用）。
+   * 圖樣對齊目前座標系的原點（世界座標或螢幕座標）。
+   */
+  ditherFast(x, y, w, h, c, level) {
+    if (level <= 0 || w <= 0 || h <= 0) return;
+    if (level >= 16) { this.rect(x, y, w, h, c); return; }
+    const key = c * 17 + level;
+    let pat = this._pats && this._pats.get(key);
+    if (!pat) {
+      if (!this._pats) this._pats = new Map();
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 4;
+      const g = cv.getContext('2d');
+      g.fillStyle = this.palette[c];
+      for (let i = 0; i < 16; i++) if (BAYER4[i] < level) g.fillRect(i & 3, i >> 2, 1, 1);
+      pat = this.ctx.createPattern(cv, 'repeat');
+      this._pats.set(key, pat);
+    }
+    this.ctx.fillStyle = pat;
+    this.ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
   }
   _text(str, x, y, font, sp, c, sc = 1) {
     const col = this.palette[c];

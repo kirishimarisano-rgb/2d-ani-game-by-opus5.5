@@ -1,10 +1,12 @@
 // 即時合成音效（Web Audio API），不使用任何音檔。
+// 聲音路徑：音效匯流排（out）與音樂匯流排（musicOut）→ 總開關（靜音）→ 壓縮器 → 喇叭
 export class Sound {
   constructor() {
-    this.ac = null; this.out = null; this.noiseBuf = null;
-    this.volume = 0.6; this.muted = false;
+    this.ac = null; this.out = null; this.musicOut = null; this.master = null; this.noiseBuf = null;
+    this.volume = 0.6; this.musicVolume = 0.5; this.muted = false;
     try { this.muted = localStorage.getItem('stardust/proto-mute') === '1'; } catch { /* 無痕模式等 */ }
     this._last = new Map();
+    this._waves = new Map();
   }
   /** 瀏覽器規定要在使用者操作後才能出聲：在第一次按鍵／點擊時呼叫 */
   unlock() {
@@ -12,22 +14,30 @@ export class Sound {
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ac = new AC();
-      this.out = this.ac.createGain();
-      this.out.gain.value = this.muted ? 0 : this.volume;
       const comp = this.ac.createDynamicsCompressor();
       comp.threshold.value = -14; comp.ratio.value = 6;
-      this.out.connect(comp); comp.connect(this.ac.destination);
+      comp.connect(this.ac.destination);
+      this.master = this.ac.createGain();
+      this.master.gain.value = this.muted ? 0 : 1;
+      this.master.connect(comp);
+      this.out = this.ac.createGain();
+      this.out.gain.value = this.volume;
+      this.out.connect(this.master);
+      this.musicOut = this.ac.createGain();
+      this.musicOut.gain.value = this.musicVolume;
+      this.musicOut.connect(this.master);
       this.noiseBuf = this.ac.createBuffer(1, this.ac.sampleRate, this.ac.sampleRate);
       const d = this.noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     } catch { this.ac = null; }
   }
   get ready() { return !!this.ac && this.ac.state === 'running' && !this.muted; }
-  setVolume(v) { this.volume = v; if (this.out && !this.muted) this.out.gain.value = v; }
+  setVolume(v) { this.volume = v; if (this.out) this.out.gain.value = v; }
+  setMusicVolume(v) { this.musicVolume = v; if (this.musicOut) this.musicOut.gain.value = v; }
   setMuted(m) {
     this.muted = m;
     try { localStorage.setItem('stardust/proto-mute', m ? '1' : '0'); } catch { /* 忽略 */ }
-    if (this.out) this.out.gain.value = m ? 0 : this.volume;
+    if (this.master) this.master.gain.value = m ? 0 : 1;
   }
   /** 同一種音效在 gap 秒內只播一次（避免一次命中多個敵人時爆音） */
   throttle(name, gap = 0.03) {
@@ -36,6 +46,18 @@ export class Sound {
     if (l !== undefined && t - l < gap) return false;
     this._last.set(name, t);
     return true;
+  }
+  /** 脈衝波（duty 0.125 / 0.25 …），紅白機風格的音色 */
+  pulseWave(duty) {
+    let w = this._waves.get(duty);
+    if (!w && this.ac) {
+      const n = 32, re = new Float32Array(n), im = new Float32Array(n);
+      for (let k = 1; k < n; k++) im[k] = 0; // 只用餘弦項
+      for (let k = 1; k < n; k++) re[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty);
+      w = this.ac.createPeriodicWave(re, im);
+      this._waves.set(duty, w);
+    }
+    return w;
   }
   _env(g, t, vol, attack, dur) {
     g.gain.setValueAtTime(0.0001, t);
@@ -46,7 +68,9 @@ export class Sound {
     if (!this.ready) return;
     const t = this.ac.currentTime + delay;
     const o = this.ac.createOscillator(), g = this.ac.createGain();
-    o.type = type; o.detune.value = detune;
+    if (type.startsWith('pulse')) o.setPeriodicWave(this.pulseWave(Number(type.slice(5)) / 100 || 0.25));
+    else o.type = type;
+    o.detune.value = detune;
     o.frequency.setValueAtTime(f0, t);
     if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
     this._env(g, t, vol, attack, dur);
@@ -70,5 +94,15 @@ export class Sound {
     if (!this.ready) return;
     const parts = [[1, 1], [2.76, 0.45 * bright], [5.4, 0.22 * bright], [8.93, 0.1 * bright]];
     for (const [r, a] of parts) this.tone({ type: 'sine', f0: f * r, dur: dur / Math.sqrt(r), vol: vol * a, delay, attack: 0.002 });
+  }
+  /** 選單常用音效 */
+  ui(kind) {
+    if (!this.ready) return;
+    if (kind === 'move') { if (this.throttle('ui-move', 0.04)) this.tone({ type: 'pulse25', f0: 880, f1: 900, dur: 0.04, vol: 0.05 }); }
+    else if (kind === 'confirm') { this.tone({ type: 'pulse25', f0: 988, dur: 0.06, vol: 0.06 }); this.tone({ type: 'pulse25', f0: 1319, dur: 0.1, vol: 0.06, delay: 0.06 }); }
+    else if (kind === 'cancel') { this.tone({ type: 'pulse25', f0: 660, f1: 440, dur: 0.1, vol: 0.05 }); }
+    else if (kind === 'buzz') { this.tone({ type: 'square', f0: 140, dur: 0.12, vol: 0.06 }); this.tone({ type: 'square', f0: 130, dur: 0.12, vol: 0.05, delay: 0.07 }); }
+    else if (kind === 'coin') { this.tone({ type: 'pulse25', f0: 1976, dur: 0.05, vol: 0.05 }); this.tone({ type: 'pulse25', f0: 2637, dur: 0.12, vol: 0.05, delay: 0.05 }); }
+    else if (kind === 'open') { [523, 784, 1047].forEach((f, i) => this.tone({ type: 'triangle', f0: f, dur: 0.1, vol: 0.06, delay: i * 0.04 })); }
   }
 }
