@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0618">
+<meta name="description" content="星屑遊樂場：二次元像素小遊戲合集。所有角色原創，像素美術與音效皆以程式即時生成。">
+<title>星屑遊樂場 ☆ STARDUST ARCADE</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7' shape-rendering='crispEdges'><g fill='%23ffd94a'><rect x='3' width='1' height='2'/><rect y='2' width='7' height='1'/><rect x='1' y='3' width='5' height='1'/><rect x='2' y='4' width='3' height='1'/><rect x='1' y='5' width='2' height='1'/><rect x='4' y='5' width='2' height='1'/><rect x='1' y='6' width='1' height='1'/><rect x='5' y='6' width='1' height='1'/></g></svg>">
+<style>
+:root {
+  --bg: #0b0618; --panel: #1b0f2e; --panel-2: #241440; --ink: #f5f2ff; --muted: #c9bdf2; --dim: #8a7ab8;
+  --line: #3d2a66; --pink: #ff5fa2; --gold: #ffd94a; --mint: #5ef2d0; --shadow: rgba(0, 0, 0, .55);
+  --b: 3px;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; }
+body {
+  margin: 0; min-height: 100vh; color: var(--ink);
+  font: 15px/1.65 system-ui, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+#sky { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; image-rendering: pixelated; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: max(28px, env(safe-area-inset-top)) 20px 40px; }
+
+/* ---------- 標題 ---------- */
+.hero { text-align: center; padding: 20px 0 6px; }
+#logo { display: block; margin: 0 auto; image-rendering: pixelated; max-width: 100%; }
+h1 {
+  margin: 14px 0 2px; font-size: clamp(26px, 5vw, 38px); font-weight: 900; letter-spacing: .28em; padding-left: .28em;
+  text-shadow: 3px 3px 0 var(--pink), 6px 6px 0 var(--shadow);
+}
+.lead { margin: 6px auto 0; color: var(--muted); max-width: 40em; }
+
+/* ---------- 區塊標頭 ---------- */
+.section-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 44px 0 6px; }
+.section-head canvas { image-rendering: pixelated; }
+.section-head h2 { margin: 0; font-size: 20px; letter-spacing: .12em; }
+.count {
+  font-size: 12px; color: var(--bg); background: var(--muted); padding: 1px 8px; font-weight: 800;
+  box-shadow: 0 -2px 0 0 var(--muted), 0 2px 0 0 var(--muted), -2px 0 0 0 var(--muted), 2px 0 0 0 var(--muted);
+}
+.section-note { color: var(--muted); margin: 6px 0 0; max-width: 58em; }
+.rule { height: 3px; margin: 14px 0 22px; background: repeating-linear-gradient(90deg, var(--line) 0 9px, transparent 9px 15px); }
+
+/* ---------- 卡片 ---------- */
+/* 卡片寬 352px = 封面原生寬 176px 的 2 倍，讓像素封面以整數倍放大 */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 352px)); justify-content: center; gap: 30px 28px; }
+.card {
+  --accent: var(--pink); --bc: var(--line);
+  position: relative; display: flex; flex-direction: column; background: var(--panel);
+  box-shadow: 0 calc(-1 * var(--b)) 0 0 var(--bc), 0 var(--b) 0 0 var(--bc),
+              calc(-1 * var(--b)) 0 0 0 var(--bc), var(--b) 0 0 0 var(--bc),
+              calc(3 * var(--b)) calc(3 * var(--b)) 0 0 var(--shadow);
+  transition: transform .08s steps(2), box-shadow .08s steps(2);
+}
+.card:hover, .card:focus-within { --bc: var(--accent); transform: translate(-3px, -3px);
+  box-shadow: 0 calc(-1 * var(--b)) 0 0 var(--bc), 0 var(--b) 0 0 var(--bc),
+              calc(-1 * var(--b)) 0 0 0 var(--bc), var(--b) 0 0 0 var(--bc),
+              calc(5 * var(--b)) calc(5 * var(--b)) 0 0 var(--shadow); }
+.card-main { display: flex; flex-direction: column; flex: 1; color: inherit; text-decoration: none; outline: none; }
+.card-main:focus-visible .play { outline: 3px dashed var(--gold); outline-offset: 4px; }
+.cover { position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden; border-bottom: var(--b) solid var(--bc); }
+.cover img { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.badge {
+  position: absolute; top: 10px; left: 10px; padding: 2px 8px 1px; font-size: 11px; font-weight: 900; letter-spacing: .1em;
+  color: var(--bg); background: var(--accent);
+  box-shadow: 0 -2px 0 0 var(--accent), 0 2px 0 0 var(--accent), -2px 0 0 0 var(--accent), 2px 0 0 0 var(--accent);
+}
+.info { padding: 14px 18px 6px; flex: 1; }
+.info h3 { margin: 0; font-size: 19px; line-height: 1.35; }
+.info .en { display: block; font-size: 11px; font-weight: 800; letter-spacing: .2em; color: var(--accent); margin-top: 2px; }
+.info .genre { margin: 6px 0 0; font-size: 13px; color: var(--gold); font-weight: 700; }
+.info .desc { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 12px; }
+.meta li { padding: 0 7px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+.meta .hi { color: var(--gold); border-color: #6b5520; }
+.play {
+  align-self: flex-start; margin: 10px 18px 18px; padding: 6px 14px 5px; font-weight: 900; letter-spacing: .08em; font-size: 14px;
+  color: var(--bg); background: var(--accent);
+  box-shadow: 0 -3px 0 0 var(--accent), 0 3px 0 0 var(--accent), -3px 0 0 0 var(--accent), 3px 0 0 0 var(--accent),
+              4px 6px 0 0 var(--shadow);
+}
+.card:hover .play { filter: brightness(1.12); }
+.card-main:active .play { transform: translate(2px, 2px); }
+
+details.concept { margin: -6px 18px 18px; border-top: 2px dashed var(--line); padding-top: 8px; font-size: 13.5px; }
+details.concept summary { cursor: pointer; color: var(--accent); font-weight: 800; letter-spacing: .06em; list-style: none; }
+details.concept summary::-webkit-details-marker { display: none; }
+details.concept summary::before { content: "▸ "; }
+details.concept[open] summary::before { content: "▾ "; }
+details.concept dl { margin: 8px 0 0; }
+details.concept dt { color: var(--gold); font-weight: 800; margin-top: 8px; }
+details.concept dd { margin: 2px 0 0; color: var(--muted); }
+
+.notice {
+  grid-column: 1 / -1; padding: 16px 18px; background: var(--panel); color: var(--muted);
+  box-shadow: 0 -3px 0 0 var(--line), 0 3px 0 0 var(--line), -3px 0 0 0 var(--line), 3px 0 0 0 var(--line);
+}
+.notice code { color: var(--gold); }
+
+footer { margin-top: 56px; padding-top: 18px; border-top: 3px dotted var(--line); color: var(--dim); font-size: 13px; text-align: center; }
+footer a { color: var(--muted); }
+.kbd-hint { color: var(--dim); font-size: 12.5px; margin-top: 6px; }
+
+/* 進入遊戲時的像素轉場 */
+#wipe { position: fixed; inset: 0; z-index: 50; background: var(--bg); pointer-events: none; visibility: hidden; clip-path: circle(0 at 50% 50%); }
+#wipe.go { visibility: visible; animation: wipe .26s steps(7) forwards; }
+@keyframes wipe { to { clip-path: circle(150% at var(--wx, 50%) var(--wy, 50%)); } }
+
+@media (max-width: 520px) {
+  .wrap { padding-left: 16px; padding-right: 16px; }
+  .grid { grid-template-columns: 1fr; gap: 26px; }
+  .info h3 { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card, .card:hover { transition: none; }
+}
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div id="wipe" aria-hidden="true"></div>
+<div class="wrap">
+  <header class="hero">
+    <canvas id="logo" role="img" aria-label="STARDUST ARCADE"></canvas>
+    <h1>星屑遊樂場</h1>
+    <p class="lead">二次元像素小遊戲合集。所有角色皆為原創，像素美術與音效全部以程式即時繪製、合成。</p>
+    <p class="kbd-hint">方向鍵或手把可選擇遊戲，Enter／A 鍵進入</p>
+  </header>
+
+  <section id="games" aria-labelledby="games-title">
+    <div class="section-head">
+      <canvas class="label" data-text="GAMES" aria-hidden="true"></canvas>
+      <h2 id="games-title">遊戲</h2>
+      <span class="count" id="games-count" hidden></span>
+    </div>
+    <div class="rule"></div>
+    <div class="grid" id="games-grid"></div>
+  </section>
+
+  <section id="prototypes" aria-labelledby="proto-title" hidden>
+    <div class="section-head">
+      <canvas class="label" data-text="PROTOTYPES" aria-hidden="true"></canvas>
+      <h2 id="proto-title">原型試玩</h2>
+      <span class="count" id="proto-count" hidden></span>
+    </div>
+    <p class="section-note">第二款遊戲的前期探索：三種不同類型的手感原型，各自只有一個場景。進入後右側有調參面板，可以即時調整速度、加速度、跳躍、擊退、打擊停頓等數值，找出最喜歡的手感。</p>
+    <div class="rule"></div>
+    <div class="grid" id="proto-grid"></div>
+  </section>
+
+  <footer>
+    <p>© 2026 星屑遊樂場 · 所有角色、像素美術與音效皆為原創，並以程式生成<br>
+    <a href="https://github.com/kirishimarisano-rgb/2d-ani-game-by-opus5.5">GitHub 原始碼</a></p>
+  </footer>
+</div>
+
+<script type="module">
+import { FONT_5x7, drawText, measureText, glyphFor } from './shared/pixel-font.js';
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CONTROL_LABEL = { keyboard: '鍵盤', touch: '觸控', gamepad: '手把', mouse: '滑鼠' };
+
+// ============ 背景：低解析度像素星空 ============
+const sky = document.getElementById('sky');
+const sg = sky.getContext('2d', { willReadFrequently: true });
+const SKY_PX = 4;
+let stars = [], skyT = 0;
+function resizeSky() {
+  sky.width = Math.ceil(innerWidth / SKY_PX);
+  sky.height = Math.ceil(innerHeight / SKY_PX);
+  stars = [];
+  const n = Math.round(sky.width * sky.height / 90);
+  for (let i = 0; i < n; i++) stars.push({ x: Math.random() * sky.width | 0, y: Math.random() * sky.height | 0, p: Math.random() * 6.28, s: Math.random() });
+  drawSky();
+}
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+function drawSky() {
+  const w = sky.width, h = sky.height;
+  // 以 4x4 有序抖動做出三段色帶漸層（像素風格的漸層）
+  const bands = [[11, 6, 24], [21, 11, 44], [33, 16, 64], [46, 22, 80]];
+  const img = sg.createImageData(w, h), d = img.data;
+  for (let y = 0; y < h; y++) {
+    const t = y / h * (bands.length - 1), i = Math.min(bands.length - 2, t | 0), f = t - i;
+    for (let x = 0; x < w; x++) {
+      const c = f > BAYER[(y & 3) * 4 + (x & 3)] / 16 ? bands[i + 1] : bands[i];
+      const o = (y * w + x) * 4;
+      d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+    }
+  }
+  sg.putImageData(img, 0, 0);
+  // 月亮
+  // 窄螢幕時把月亮移到右上角，避免壓到 LOGO
+  const narrow = w * SKY_PX < 760;
+  const r = narrow ? 4 : Math.max(5, Math.min(w, h) * 0.05);
+  const mx = narrow ? w - 8 : w - Math.max(10, w * 0.12), my = narrow ? 7 : Math.max(9, h * 0.13);
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+    const d = Math.hypot(x, y);
+    if (d <= r) { sg.fillStyle = Math.hypot(x - r * 0.35, y - r * 0.3) < r * 0.8 ? '#fff3c4' : '#e8c874'; sg.fillRect(mx + x | 0, my + y | 0, 1, 1); }
+  }
+  skyBase = sg.getImageData(0, 0, w, h);
+}
+let skyBase = null, shoot = null;
+function tickSky() {
+  if (!skyBase) return;
+  sg.putImageData(skyBase, 0, 0);
+  for (const s of stars) {
+    const tw = Math.sin(skyT * (1 + s.s * 2) + s.p);
+    if (tw < -0.55) continue;
+    sg.fillStyle = tw > 0.8 ? '#ffffff' : s.s > 0.6 ? '#b9a8ff' : '#6d5ba8';
+    sg.fillRect(s.x, s.y, 1, 1);
+    if (tw > 0.97 && s.s > 0.7) { sg.fillStyle = '#6d5ba8'; sg.fillRect(s.x - 1, s.y, 1, 1); sg.fillRect(s.x + 1, s.y, 1, 1); sg.fillRect(s.x, s.y - 1, 1, 1); sg.fillRect(s.x, s.y + 1, 1, 1); }
+  }
+  // 偶爾出現的流星
+  if (!shoot && Math.random() < 0.004) shoot = { x: Math.random() * sky.width * 0.7, y: Math.random() * sky.height * 0.3, t: 0 };
+  if (shoot) {
+    shoot.t++;
+    for (let i = 0; i < 6; i++) { sg.fillStyle = i < 2 ? '#ffffff' : '#b9a8ff'; sg.fillRect(shoot.x + shoot.t * 2 - i | 0, shoot.y + shoot.t - i * 0.5 | 0, 1, 1); }
+    if (shoot.t > 40) shoot = null;
+  }
+}
+
+// ============ LOGO：點陣字 + 掃光 ============
+const logo = document.getElementById('logo');
+const lg = logo.getContext('2d');
+const LOGO_TEXT = 'STARDUST ARCADE';
+const logoPixels = [];
+(function buildLogoMask() {
+  let cx = 2;
+  for (const ch of LOGO_TEXT) {
+    const rows = glyphFor(FONT_5x7, ch);
+    rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === '#') logoPixels.push([cx + x, 2 + y]); });
+    cx += FONT_5x7.w + 1;
+  }
+  logo.width = measureText(LOGO_TEXT, FONT_5x7) + 5;
+  logo.height = FONT_5x7.h + 5;
+})();
+const ROW_COL = ['#fff6c8', '#fff6c8', '#ffd94a', '#ffd94a', '#ffb13d', '#ff8f3d', '#ff8f3d'];
+function fitLogo() {
+  const max = Math.min(document.querySelector('.hero').clientWidth, 720);
+  const sc = Math.max(2, Math.min(7, Math.floor(max / logo.width)));
+  logo.style.width = logo.width * sc + 'px';
+  logo.style.height = logo.height * sc + 'px';
+}
+function drawLogo(t) {
+  lg.clearRect(0, 0, logo.width, logo.height);
+  const set = (x, y, c) => { lg.fillStyle = c; lg.fillRect(x, y, 1, 1); };
+  for (const [x, y] of logoPixels) { set(x + 1, y + 1, '#ff5fa2'); set(x + 2, y + 2, '#1b0f2e'); }
+  for (const [x, y] of logoPixels) for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) set(x + dx, y + dy, '#1b0f2e');
+  const band = ((t / 18) % (logo.width + 60)) - 20;
+  for (const [x, y] of logoPixels) {
+    const d = x - y * 0.6 - band;
+    set(x, y, d > 0 && d < 3 ? '#ffffff' : ROW_COL[y - 2]);
+  }
+}
+
+// ============ 區塊標籤（點陣字） ============
+for (const c of document.querySelectorAll('canvas.label')) {
+  const txt = c.dataset.text;
+  c.width = measureText(txt, FONT_5x7) + 2; c.height = FONT_5x7.h + 2;
+  const g = c.getContext('2d');
+  drawText(g, txt, 0, 0, '#ff5fa2', { shadow: '#1b0f2e' });
+  drawText(g, txt, 0, 0, '#ffd94a');
+  c.style.width = c.width * 3 + 'px'; c.style.height = c.height * 3 + 'px';
+}
+
+// ============ 載入遊戲清單 ============
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function readHiScore(key) { try { const v = parseInt(localStorage.getItem(key) || '0', 10); return v > 0 ? v : 0; } catch (e) { return 0; } }
+
+function placeholderCover(entry) {
+  const W = 176, H = 99, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const acc = entry.accent || '#ff5fa2';
+  g.fillStyle = '#1b0f2e'; g.fillRect(0, 0, W, H);
+  g.fillStyle = acc;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (BAYER[(y & 3) * 4 + (x & 3)] / 16 < y / H * 0.5) g.fillRect(x, y, 1, 1);
+  const label = (entry.subtitle || entry.id || '?').toUpperCase().slice(0, 16);
+  const sc = measureText(label, FONT_5x7) * 2 < W - 12 ? 2 : 1;
+  drawText(g, label, W / 2, H / 2 - FONT_5x7.h * sc / 2, '#ffffff', { align: 'center', scale: sc, outline: '#1b0f2e' });
+  return c.toDataURL();
+}
+
+function makeCard(entry, kind) {
+  const card = el('article', 'card');
+  if (entry.accent) card.style.setProperty('--accent', entry.accent);
+  const a = el('a', 'card-main');
+  a.href = entry.path;
+  a.setAttribute('aria-label', `${entry.title}（${entry.genre}）${kind === 'proto' ? '— 原型試玩' : ''}`);
+
+  const cover = el('div', 'cover');
+  const img = el('img');
+  img.alt = ''; img.width = 176; img.height = 99; img.decoding = 'async';
+  img.src = entry.cover || placeholderCover(entry);
+  img.addEventListener('error', () => { if (!img.dataset.fallback) { img.dataset.fallback = '1'; img.src = placeholderCover(entry); } });
+  cover.append(img);
+  const badgeText = entry.badge || (kind === 'proto' ? 'PROTOTYPE' : null);
+  if (badgeText) cover.append(el('span', 'badge', badgeText));
+  a.append(cover);
+
+  const info = el('div', 'info');
+  const h3 = el('h3', null, entry.title);
+  if (entry.subtitle) h3.append(el('span', 'en', entry.subtitle));
+  info.append(h3, el('p', 'genre', entry.genre));
+  if (entry.description) info.append(el('p', 'desc', entry.description));
+  const meta = el('ul', 'meta');
+  for (const k of entry.controls || []) meta.append(el('li', null, CONTROL_LABEL[k] || k));
+  if (entry.highScoreKey) {
+    const hi = readHiScore(entry.highScoreKey);
+    if (hi) meta.append(el('li', 'hi', '最高分 ' + hi.toLocaleString('zh-TW')));
+  }
+  if (meta.children.length) info.append(meta);
+  a.append(info);
+  a.append(el('span', 'play', kind === 'proto' ? '▶ 試玩原型' : '▶ 開始遊戲'));
+  card.append(a);
+
+  if (entry.concept) {
+    const d = el('details', 'concept');
+    d.append(el('summary', null, '概念摘要'));
+    const dl = el('dl');
+    for (const [k, label] of [['loop', '核心玩法循環'], ['growth', '成長系統'], ['feel', '手感重點'], ['style', '畫面風格']]) {
+      if (!entry.concept[k]) continue;
+      dl.append(el('dt', null, label), el('dd', null, entry.concept[k]));
+    }
+    d.append(dl);
+    card.append(d);
+  }
+  return card;
+}
+
+function validEntry(e) {
+  const ok = e && typeof e.id === 'string' && typeof e.title === 'string' && typeof e.path === 'string' && typeof e.genre === 'string';
+  if (!ok) console.warn('games.json：略過格式不完整的項目', e);
+  return ok;
+}
+
+function fillSection(gridId, countId, list, kind) {
+  const grid = document.getElementById(gridId);
+  grid.textContent = '';
+  const items = (list || []).filter(validEntry);
+  items.forEach(e => grid.append(makeCard(e, kind)));
+  const count = document.getElementById(countId);
+  count.textContent = items.length + (kind === 'proto' ? ' 個原型' : ' 款遊戲');
+  count.hidden = !items.length;
+  return items.length;
+}
+
+function showError(msg) {
+  const grid = document.getElementById('games-grid');
+  grid.textContent = '';
+  const n = el('div', 'notice');
+  n.append(el('strong', null, '無法載入遊戲清單 games.json。'), document.createElement('br'));
+  if (location.protocol === 'file:') {
+    n.append('瀏覽器不允許直接以檔案方式讀取 JSON，請在專案資料夾執行 ');
+    n.append(el('code', null, 'python3 -m http.server'));
+    n.append('，再開啟 http://localhost:8000/ 。');
+  } else n.append('（' + msg + '）請稍後重新整理頁面。');
+  grid.append(n);
+}
+
+async function loadList() {
+  try {
+    const res = await fetch('games.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    fillSection('games-grid', 'games-count', data.games, 'game');
+    const np = fillSection('proto-grid', 'proto-count', data.prototypes, 'proto');
+    document.getElementById('prototypes').hidden = !np;
+    document.body.dataset.loaded = 'true';
+  } catch (e) {
+    console.error(e);
+    showError(e.message);
+    document.body.dataset.loaded = 'error';
+  }
+}
+
+// ============ 鍵盤／手把選擇 ============
+const cards = () => [...document.querySelectorAll('.card-main')];
+function moveFocus(dx, dy) {
+  const list = cards();
+  if (!list.length) return;
+  const cur = document.activeElement;
+  if (!list.includes(cur)) { list[0].focus(); list[0].scrollIntoView({ block: 'nearest' }); return; }
+  const r0 = cur.getBoundingClientRect(), x0 = r0.left + r0.width / 2, y0 = r0.top + r0.height / 2;
+  let best = null, bestD = Infinity;
+  for (const e of list) {
+    if (e === cur) continue;
+    const r = e.getBoundingClientRect(), vx = r.left + r.width / 2 - x0, vy = r.top + r.height / 2 - y0;
+    const along = vx * dx + vy * dy;
+    if (along <= 1) continue;
+    const d = along + Math.abs(vx * dy - vy * dx) * 2;
+    if (d < bestD) { bestD = d; best = e; }
+  }
+  if (best) { best.focus(); best.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }); }
+}
+addEventListener('keydown', e => {
+  const dir = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] }[e.key];
+  if (dir && !e.altKey && !e.metaKey && !e.ctrlKey) { e.preventDefault(); moveFocus(...dir); }
+});
+let padPrev = {}, padRepeat = 0;
+function pollPad() {
+  const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+  if (!pads.length) return;
+  const p = pads[0], b = i => !!(p.buttons[i] && p.buttons[i].pressed);
+  const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
+  const cur = { r: b(15) || ax > 0.6, l: b(14) || ax < -0.6, d: b(13) || ay > 0.6, u: b(12) || ay < -0.6, a: b(0) };
+  const now = performance.now();
+  for (const [k, dir] of [['r', [1, 0]], ['l', [-1, 0]], ['d', [0, 1]], ['u', [0, -1]]]) {
+    if (cur[k] && (!padPrev[k] || now > padRepeat)) { moveFocus(...dir); padRepeat = now + (padPrev[k] ? 140 : 380); }
+  }
+  if (cur.a && !padPrev.a && cards().includes(document.activeElement)) document.activeElement.click();
+  padPrev = cur;
+}
+
+// ============ 進入遊戲的轉場 ============
+const wipe = document.getElementById('wipe');
+document.addEventListener('click', e => {
+  const a = e.target.closest('a.card-main');
+  if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || reduceMotion) return;
+  e.preventDefault();
+  const r = a.getBoundingClientRect();
+  wipe.style.setProperty('--wx', (r.left + r.width / 2) + 'px');
+  wipe.style.setProperty('--wy', (r.top + r.height / 3) + 'px');
+  wipe.classList.remove('go'); void wipe.offsetWidth; wipe.classList.add('go');
+  setTimeout(() => { location.href = a.href; }, 240);
+});
+addEventListener('pageshow', () => wipe.classList.remove('go'));
+
+// ============ 主迴圈 ============
+addEventListener('resize', () => { resizeSky(); fitLogo(); });
+resizeSky(); fitLogo(); drawLogo(0);
+let last = 0;
+function frame(now) {
+  if (now - last > 50) { // 約 20fps，足夠且省電
+    last = now; skyT += 0.05;
+    if (!reduceMotion) { tickSky(); drawLogo(now); } else tickSky();
+    pollPad();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+loadList();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "games": [
+    {
+      "id": "magical-shooter",
+      "title": "星織魔法少女 艾菈",
+      "subtitle": "STARLIGHT AIRA",
+      "genre": "縱向捲軸彈幕射擊",
+      "description": "操控原創魔法少女艾菈穿越星夜，擊退夜蝠精、暗影妖精與水晶魔像，最後迎戰兩階段 Boss「夢魘女王 諾克緹娜」。",
+      "path": "games/magical-shooter/",
+      "cover": "games/magical-shooter/cover.png",
+      "accent": "#ff5fa2",
+      "controls": ["keyboard", "touch"],
+      "highScoreKey": "aira_hi"
+    }
+  ],
+  "prototypes": []
+}

@@ -1,0 +1,13 @@
+{
+  "name": "stardust-arcade",
+  "private": true,
+  "description": "星屑遊樂場：二次元像素小遊戲合集（靜態網站，開發工具才需要 Node）",
+  "scripts": {
+    "serve": "python3 -m http.server 8000",
+    "test": "node tools/smoke-test.mjs",
+    "covers": "node tools/make-covers.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

@@ -5,9 +5,9 @@
 
 ## ▶ 立即遊玩
 
-**https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/**
+**https://kirishimarisano-rgb.github.io/2d-ani-game-by-opus5.5/games/magical-shooter/**
 
-電腦與手機瀏覽器都能直接玩，不需要安裝。
+電腦與手機瀏覽器都能直接玩，不需要安裝。本作收錄於[星屑遊樂場](../../README.md)小遊戲合集，也可以從合集首頁進入。
 
 ## 🎮 操作方式
 
@@ -21,6 +21,7 @@
 | 暫停時重新開始／回標題 | R ／ Q | — |
 | 開始／重新開始 | Z / Enter | 點擊畫面 |
 | 靜音切換 | M | 標題畫面右上角 ♪ |
+| 返回遊戲選單 | 標題畫面按 Esc | 左上角「遊戲選單」按鈕（遊玩中會隱藏，暫停時出現） |
 
 ## 📖 遊戲說明
 
@@ -65,11 +66,11 @@
 
 ## 💻 本機執行
 
-直接用瀏覽器開啟 `index.html` 即可，或：
+在專案根目錄啟動任一靜態伺服器：
 
 ```bash
 python3 -m http.server 8000
-# 開啟 http://localhost:8000
+# 開啟 http://localhost:8000/games/magical-shooter/
 ```
 
 ## 📦 開發里程碑
