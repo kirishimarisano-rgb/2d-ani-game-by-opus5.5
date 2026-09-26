@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>精靈圖檢視器</title>
+<style>
+  body { margin: 0; background: #222; color: #ddd; font: 12px/1.4 system-ui, sans-serif; }
+  #sheet { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; align-items: flex-end; }
+  figure { margin: 0; text-align: center; }
+  canvas { image-rendering: pixelated; background: var(--bg, #3a3a3a); display: block; }
+  figcaption { margin-top: 3px; }
+  #pal { display: flex; gap: 2px; padding: 10px 10px 0; }
+  #pal span { width: 28px; height: 28px; display: inline-flex; align-items: flex-end; justify-content: center; font-size: 9px; color: #fff; text-shadow: 0 0 2px #000; }
+</style>
+</head>
+<body>
+<div id="pal"></div>
+<div id="sheet"></div>
+<script type="module">
+// 用法：tools/sprite-sheet.html?proto=moon-kagura&zoom=6&bg=2
+const q = new URLSearchParams(location.search);
+const proto = q.get('proto');
+const zoom = +(q.get('zoom') || 6);
+const mod = await import(`../prototypes/${proto}/sprites.js`);
+const pal = mod.PALETTE;
+document.getElementById('pal').innerHTML = pal.map((c, i) => `<span style="background:${c}">${i}</span>`).join('');
+if (q.get('bg')) document.body.style.setProperty('--bg', pal[+q.get('bg')]);
+const S = mod.buildSprites();
+const sheet = document.getElementById('sheet');
+function add(name, spr) {
+  const f = document.createElement('figure');
+  const c = document.createElement('canvas');
+  c.width = spr.w * zoom; c.height = spr.h * zoom;
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.drawImage(spr.canvas, 0, 0, c.width, c.height);
+  f.append(c);
+  const cap = document.createElement('figcaption'); cap.textContent = name; f.append(cap);
+  sheet.append(f);
+}
+function walk(prefix, v) {
+  if (!v) return;
+  if (v.canvas && v.w) add(prefix, v);
+  else if (Array.isArray(v)) v.forEach((x, i) => walk(`${prefix}[${i}]`, x));
+  else if (typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(prefix ? `${prefix}.${k}` : k, x);
+}
+walk('', S);
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>
