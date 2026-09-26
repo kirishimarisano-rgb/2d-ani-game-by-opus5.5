@@ -219,6 +219,7 @@ function create(ctx) {
     if (!nodeUnlocked(mapSel)) mapSel = 1;
   }
   function startStage(i) {
+    save.save();
     world.load(i);
     scene = 'play'; overlay = null;
     music.play(SONGS[STAGES[i].song]);
