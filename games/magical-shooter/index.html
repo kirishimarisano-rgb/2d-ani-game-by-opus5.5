@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0618">
 <title>星織魔法少女 艾菈 ☆ STARLIGHT AIRA</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7' shape-rendering='crispEdges'><g fill='%23ffd94a'><rect x='3' width='1' height='2'/><rect y='2' width='7' height='1'/><rect x='1' y='3' width='5' height='1'/><rect x='2' y='4' width='3' height='1'/><rect x='1' y='5' width='2' height='1'/><rect x='4' y='5' width='2' height='1'/><rect x='1' y='6' width='1' height='1'/><rect x='5' y='6' width='1' height='1'/></g></svg>">
 <style>
 html,body{margin:0;height:100%;background:#0b0618;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
@@ -13,6 +14,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;box-s
 </head>
 <body>
 <div id="wrap"><canvas id="c"></canvas></div>
+<script src="../../shared/launcher-link.js"></script>
 <script>
 'use strict';
 // ============================================================
@@ -897,6 +899,7 @@ function update(dt) {
   stateT += dt;
   if (state === 'title') {
     if (anyHit(...START_KEYS)) newGame();
+    else if (anyHit('Escape', 'Backspace') && window.PixelArcade) PixelArcade.goToLauncher();
   } else if (state === 'play') {
     if (anyHit('KeyP', 'Escape')) { setState('pause'); sfx('pause'); return; }
     updatePlay(dt);
@@ -930,7 +933,7 @@ function drawTitle() {
   if (blink(1.2)) text(IS_TOUCH ? '— 點擊畫面開始 —' : '— 按 Z / Enter 開始 —', W / 2, 222, 10, '#ffffff', 'center');
   const lines = IS_TOUCH ?
     ['拖曳：移動（自動射擊）', '右下按鈕：星爆炸彈', '右上按鈕：暫停'] :
-    ['方向鍵/WASD：移動', 'Z/Space：射擊  Shift：低速', 'X：星爆炸彈  P/Esc：暫停', 'M：靜音'];
+    ['方向鍵/WASD：移動', 'Z/Space：射擊  Shift：低速', 'X：星爆炸彈  P/Esc：暫停', 'M：靜音   Esc：返回遊戲選單'];
   lines.forEach((l, i) => text(l, W / 2, 250 + i * 13, 8, '#d2c0ff', 'center'));
   text('© 2026 原創角色「艾菈」', W / 2, H - 14, 7, '#6a5a9a', 'center');
   text(muted ? '♪OFF' : '♪ON', W - 4, 10, 8, muted ? '#6a5a9a' : '#5ef2d0', 'right');
@@ -948,6 +951,7 @@ function drawTouchUI() {
   ctx.globalAlpha = 1;
 }
 function render(dt) {
+  if (window.PixelArcade) PixelArcade.setBackVisible(state !== 'play');
   ctx.setTransform(S, 0, 0, S, 0, 0);
   ctx.imageSmoothingEnabled = false;
   drawBG(state === 'pause' ? 0 : dt);
