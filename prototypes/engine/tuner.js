@@ -172,7 +172,7 @@ export class Tuner {
     return d;
   }
   _row(it) {
-    const row = el('div', 'tn-row tn-' + it.type);
+    const row = el('div', 'tn-row is-' + it.type);
     row.dataset.key = it.key;
     const label = el('label', 'tn-label');
     const name = el('span', 'tn-name', it.label);
@@ -189,7 +189,7 @@ export class Tuner {
       num.addEventListener('change', () => this.set(it.key, num.value));
       num.addEventListener('keydown', e => { if (e.key === 'Enter') num.blur(); });
       valBox.append(num);
-      if (it.unit) valBox.append(el('span', 'tn-unit', it.unit));
+      valBox.append(el('span', 'tn-unit', it.unit || ''));
       row.append(valBox);
       const range = el('input', 'tn-range');
       range.type = 'range'; range.min = it.min; range.max = it.max; range.step = it.step || 1;

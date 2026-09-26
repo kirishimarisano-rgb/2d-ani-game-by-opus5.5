@@ -206,6 +206,42 @@ export class Sprite {
   }
 }
 
+// ---------- 字元圖工具：用程式產生、描邊、疊圖、旋轉 ----------
+/** 以函式產生 w×h 的字元圖，fn(x, y) 回傳字元（falsy＝透明） */
+export function gridRows(w, h, fn) {
+  const rows = [];
+  for (let y = 0; y < h; y++) { let r = ''; for (let x = 0; x < w; x++) r += fn(x, y) || '.'; rows.push(r); }
+  return rows;
+}
+/** 在所有不透明像素外側加一圈外框字元（四方向） */
+export function outlineRows(rows, ch = 'o') {
+  const h = rows.length, w = Math.max(...rows.map(r => r.length));
+  const at = (x, y) => (y >= 0 && y < h && x >= 0 && x < rows[y].length) ? rows[y][x] : '.';
+  return gridRows(w, h, (x, y) => {
+    const c = at(x, y);
+    if (c !== '.') return c;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = at(x + dx, y + dy); if (n !== '.' && n !== ch) return ch; }
+    return '.';
+  });
+}
+/** 把 sub 疊到 rows 的 (ox, oy) 位置（'.' 不覆蓋） */
+export function stampRows(rows, sub, ox, oy) {
+  const out = rows.map(r => r.split(''));
+  sub.forEach((r, y) => {
+    for (let x = 0; x < r.length; x++) {
+      if (r[x] !== '.' && out[oy + y] && ox + x >= 0 && ox + x < out[oy + y].length) out[oy + y][ox + x] = r[x];
+    }
+  });
+  return out.map(r => r.join(''));
+}
+/** 順時針旋轉 90 度（像素完全不失真） */
+export function rotateRows(rows) {
+  const h = rows.length, w = Math.max(...rows.map(r => r.length));
+  return gridRows(h, w, (x, y) => (rows[h - 1 - x][y] || '.'));
+}
+export const flipRows = rows => rows.map(r => [...r].reverse().join(''));
+export const inEllipse = (x, y, cx, cy, rx, ry) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
+
 /** 把多個字元圖層疊合成一張（後面的覆蓋前面的非透明字元），用來組合角色的分件動畫 */
 export function composeRows(w, h, parts) {
   const grid = Array.from({ length: h }, () => Array(w).fill('.'));
@@ -254,6 +290,11 @@ export class Screen extends Painter {
     if (this.view.width !== this.w * s) { this.view.width = this.w * s; this.view.height = this.h * s; }
     this.view.style.width = this.w * s / dpr + 'px';
     this.view.style.height = this.h * s / dpr + 'px';
+  }
+  /** 把瀏覽器座標（clientX/Y）換算成原生畫面座標 */
+  toNative(cx, cy) {
+    const r = this.view.getBoundingClientRect();
+    return { x: (cx - r.left) / r.width * this.w, y: (cy - r.top) / r.height * this.h };
   }
   /** 設定鏡頭（整數平移，確保像素對齊）。之後的繪圖都是世界座標 */
   camera(x, y) {

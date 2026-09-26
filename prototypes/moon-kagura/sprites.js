@@ -1,7 +1,7 @@
 // 《月下神樂》像素美術：全部以字元陣列定義，對應下方 16 色調色盤。
 // 角色採「分件組合」：頭、身體、緋袴各自定義後疊合成每一格；
 // 前手與神樂鈴杖、馬尾擺動在遊戲中以程式即時繪製，揮擊角度可以連續變化。
-import { Sprite, composeRows } from '../engine/pixel.js';
+import { Sprite, composeRows, gridRows as grid, outlineRows as outline, stampRows as stamp, inEllipse } from '../engine/pixel.js';
 
 export const PALETTE = [
   '#0d0b1a', // 0 墨黑：外框
@@ -21,30 +21,6 @@ export const PALETTE = [
   '#2f5a4e', // 14 深綠
   '#86c28f', // 15 靈火綠
 ];
-
-// ---------- 小工具：以函式產生字元圖、自動描邊、疊圖 ----------
-function grid(w, h, fn) {
-  const rows = [];
-  for (let y = 0; y < h; y++) { let r = ''; for (let x = 0; x < w; x++) r += fn(x, y) || '.'; rows.push(r); }
-  return rows;
-}
-/** 在所有不透明像素外側加上一圈外框字元 */
-function outline(rows, ch = 'o') {
-  const h = rows.length, w = Math.max(...rows.map(r => r.length));
-  const at = (x, y) => (y >= 0 && y < h && x >= 0 && x < rows[y].length) ? rows[y][x] : '.';
-  return grid(w, h, (x, y) => {
-    const c = at(x, y);
-    if (c !== '.') return c;
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = at(x + dx, y + dy); if (n !== '.' && n !== ch) return ch; }
-    return '.';
-  });
-}
-function stamp(rows, sub, ox, oy) {
-  const out = rows.map(r => r.split(''));
-  sub.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] !== '.' && out[oy + y] && ox + x >= 0 && ox + x < out[oy + y].length) out[oy + y][ox + x] = r[x]; });
-  return out.map(r => r.join(''));
-}
-const inEllipse = (x, y, cx, cy, rx, ry) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
 
 // ================= 主角：緋鈴 =================
 const HIRIN = { o: 0, h: 2, l: 3, L: 4, w: 6, v: 5, R: 9, d: 8, s: 12, p: 13, r: 9, g: 11, G: 10 };
