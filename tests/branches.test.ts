@@ -2,7 +2,7 @@
 // 執行：npm test
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BACKGROUNDS, BG_FX, EXPRESSIONS, FX, MUSIC, POSITIONS, SFX } from '../src/core/cast';
+import { BACKGROUNDS, BG_FX, CAST, EXPRESSIONS, FX, MUSIC, POSITIONS, SFX, SIDE_NAMES } from '../src/core/cast';
 import { parse } from '../src/core/parser';
 import { VM, cloneState, newState, visibleOptions } from '../src/core/vm';
 import { GLYPH, TEXT_W, TEXT_W_FACE, textWidth, wrap } from '../src/core/wrap';
@@ -25,6 +25,8 @@ for (const s of prog.stmts) {
   switch (s.t) {
     case 'say': {
       chars += [...s.text].length;
+      if (s.name && !s.who && !SIDE_NAMES.includes(s.name)) errors.push(`${at(s)} 不認識的說話者「${s.name}」（如果是旁白，冒號前面不要放這麼短的字）`);
+      if (s.who && s.name && !CAST[s.name] && s.name !== '？？？') errors.push(`${at(s)} 顯示名稱怪怪的：${s.name}`);
       if (s.who && s.expr && !EXPRESSIONS[s.who].includes(s.expr)) errors.push(`${at(s)} ${s.who} 沒有表情 ${s.expr}`);
       const maxW = s.who === 'yan' ? TEXT_W_FACE : TEXT_W;
       for (const l of wrap(s.text, maxW))

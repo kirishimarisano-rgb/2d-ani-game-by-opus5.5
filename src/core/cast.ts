@@ -6,6 +6,9 @@ export const CAST: Record<string, string> = {
   晏: 'yan',
 };
 
+// 沒有立繪的配角（劇本裡出現其他名字會被測試抓出來，避免旁白被誤判成台詞）
+export const SIDE_NAMES = ['阿嬤', '程伯', '許爸', '里長', '廣播', '媽媽', '阿伯', '小孩', '客人', '眾人', '？？？'];
+
 export const HEROINES = ['xiaoman', 'shao', 'pei'];
 
 // 每個角色可用的表情
@@ -31,7 +34,7 @@ export const BACKGROUNDS: Record<string, string[]> = {
 export const BG_FX = ['rain', 'fireworks'];
 export const MUSIC = ['title', 'daily', 'sad', 'night', 'stop'];
 export const SFX = ['select', 'bell', 'door', 'train', 'tape', 'phone'];
-export const FX = ['shake', 'flash', 'fadeout'];
+export const FX = ['shake', 'flash'];
 export const POSITIONS = ['left', 'center', 'right'];
 
 // 文字嗶聲的音高（Hz），每個角色不同
