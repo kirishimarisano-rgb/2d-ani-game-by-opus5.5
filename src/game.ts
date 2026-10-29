@@ -202,7 +202,9 @@ export class Game {
 
   present(block: Block | null) {
     this.block = block;
-    this.say = null;
+    // 選項出現時保留上一句台詞在對話框裡
+    if (block?.t !== 'choice') this.say = null;
+    else if (this.say) this.finishPage();
     this.choices = [];
     if (!block) {
       this.toTitle();
@@ -315,6 +317,30 @@ export class Game {
   pushLog(e: LogEntry) {
     this.log.push(e);
     if (this.log.length > 300) this.log.shift();
+  }
+
+  /** 測試與截圖用：直接跳到某個標籤 */
+  debugJump(label: string, vars: Record<string, number> = {}, flags: Record<string, boolean> = {}) {
+    const st = newState(this.prog.labels[label]);
+    st.vars = vars;
+    st.flags = flags;
+    // 依檔案順序重播前面的場景指令，讓畫面接近實際玩到這裡的樣子
+    for (let i = 0; i < st.pc; i++) {
+      const s = this.prog.stmts[i];
+      if (s.t === 'bg') st.scene = { ...st.scene, bg: s.name, time: s.time, fx: s.fx, chars: {} };
+      if (s.t === 'show') st.scene.chars[s.who] = { expr: s.expr, pos: s.pos ?? st.scene.chars[s.who]?.pos ?? 'center' };
+      if (s.t === 'hide') {
+        if (s.who === 'all') st.scene.chars = {};
+        else delete st.scene.chars[s.who];
+      }
+      if (s.t === 'music') st.scene.music = s.name === 'stop' ? null : s.name;
+    }
+    this.vm = new VM(this.prog, st);
+    this.mode = 'play';
+    this.overlay = null;
+    this.ending = null;
+    this.chapterText = '';
+    this.proceed();
   }
 
   // ================= 存讀檔 =================
@@ -470,7 +496,18 @@ export class Game {
     ctx.drawImage(art.base, 0, 0);
     if (sc.bg === 'seawall') drawSeaSparkle(ctx, sc.time, t);
     if (sc.bg === 'temple') drawLanterns(ctx, t);
-    if (sc.fx.includes('fireworks')) drawFireworks(ctx, t);
+    if (sc.fx.includes('fireworks')) {
+      // 倉庫裡只從拱窗看得到煙火
+      ctx.save();
+      if (sc.bg === 'warehouse') {
+        ctx.beginPath();
+        ctx.ellipse(160, 26, 50, 22, 0, Math.PI, 0);
+        ctx.rect(110, 26, 100, 34);
+        ctx.clip();
+      }
+      drawFireworks(ctx, t);
+      ctx.restore();
+    }
     // 立繪
     for (const [id, c] of Object.entries(sc.chars)) {
       const x = POS_X[c.pos] ?? 160;
@@ -573,16 +610,34 @@ export class Game {
   // ---- 開頭：點擊開始 ----
   renderPress() {
     const ctx = this.ctx;
+    this.dimBackground(8);
     drawBigText(ctx, '浪尾支線', 112, 46, 2, 6, 25);
-    drawTiny(ctx, 'LANGWEI LINE - LAST STOP SUMMER', 160 - tinyWidth('LANGWEI LINE - LAST STOP SUMMER') / 2, 76, 28);
+    ctx.fillStyle = PALETTE[29];
+    ctx.fillRect(0, 73, W, 9);
+    drawTiny(ctx, 'LANGWEI LINE - LAST STOP SUMMER', 160 - tinyWidth('LANGWEI LINE - LAST STOP SUMMER') / 2, 75, 28);
     if (Math.floor(this.now / 600) % 2 === 0) drawText(ctx, '— 點一下畫面開始 —', 160 - this.textW('— 點一下畫面開始 —') / 2, 132, 6, 25);
   }
 
   // ---- 標題 ----
+  dimBackground(level: number) {
+    const tc = this.tmp.getContext('2d')!;
+    tc.clearRect(0, 0, W, H);
+    tc.fillStyle = PALETTE[29];
+    tc.fillRect(0, 0, W, H);
+    tc.globalCompositeOperation = 'destination-in';
+    tc.fillStyle = ditherPattern(tc, level);
+    tc.fillRect(0, 0, W, H);
+    tc.globalCompositeOperation = 'source-over';
+    this.ctx.drawImage(this.tmp, 0, 0);
+  }
+
   renderTitle() {
     const ctx = this.ctx;
+    this.dimBackground(8);
     drawBigText(ctx, '浪尾支線', 112, 30, 2, 6, 25);
-    drawTiny(ctx, 'LANGWEI LINE - LAST STOP SUMMER', 160 - tinyWidth('LANGWEI LINE - LAST STOP SUMMER') / 2, 60, 28);
+    ctx.fillStyle = PALETTE[29];
+    ctx.fillRect(0, 57, W, 9);
+    drawTiny(ctx, 'LANGWEI LINE - LAST STOP SUMMER', 160 - tinyWidth('LANGWEI LINE - LAST STOP SUMMER') / 2, 59, 28);
     const hasSave = [0, 1, 2].some((i) => store.slot(i));
     const items: [string, () => void, boolean?][] = [
       ['開始遊戲', () => this.newGame()],

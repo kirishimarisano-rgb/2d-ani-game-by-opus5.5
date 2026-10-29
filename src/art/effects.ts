@@ -23,7 +23,7 @@ export function drawScenery(ctx: CanvasRenderingContext2D, art: BgArt, t: number
     const off = Math.floor((t / 1000) * speeds[i]) % 640;
     for (const [x, y] of TRAIN_WINDOWS) {
       // 每扇窗看到的是同一條風景的不同段落
-      const base = (off + x * 1.4) % 640;
+      const base = Math.floor(off + x * 1.4) % 640;
       ctx.drawImage(layer, -base + x, y);
       ctx.drawImage(layer, -base + x + 640, y);
     }

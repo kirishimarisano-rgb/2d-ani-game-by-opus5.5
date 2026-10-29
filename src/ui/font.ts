@@ -42,6 +42,9 @@ function glyph(ch: string, color: number): HTMLCanvasElement {
 }
 
 export function drawText(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color = 6, shadow: number | null = 0) {
+  // 一律對齊整數像素，避免瀏覽器混色
+  x = Math.round(x);
+  y = Math.round(y);
   let cx = x;
   for (const ch of s) {
     if (ch !== ' ' && ch !== '　') {
@@ -55,6 +58,8 @@ export function drawText(ctx: CanvasRenderingContext2D, s: string, x: number, y:
 
 /** 放大的標題字（每個點陣字像素畫成 scale×scale） */
 export function drawBigText(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, scale: number, color: number, shadow: number) {
+  x = Math.round(x);
+  y = Math.round(y);
   let cx = x;
   for (const ch of s) {
     const m = mask(ch);
@@ -93,6 +98,8 @@ export function tinyWidth(s: string) {
 
 export function drawTiny(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, color: number) {
   ctx.fillStyle = PALETTE[color];
+  x = Math.round(x);
+  y = Math.round(y);
   let cx = x;
   for (const ch of s.toUpperCase()) {
     const g = TINY[ch];
