@@ -1,0 +1,22 @@
+{
+  "name": "langwei-line",
+  "version": "1.0.0",
+  "description": "浪尾支線：像素風 galgame",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "tsx tests/branches.test.ts",
+    "shots": "npm run build && node tests/screenshots.mjs"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vite-plugin-singlefile": "^2.3.4"
+  },
+  "private": true,
+  "type": "module"
+}

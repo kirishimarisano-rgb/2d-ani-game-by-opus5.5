@@ -1,0 +1,14 @@
+*start
+@bg station day
+@show shao normal
+韶：你好。
+晏(smile)：嗨。
+#choice
+> 安靜 => a {shao+1}
+> 問 => - 
+#end
+*a
+@if shao>=1 => e1
+@ending normal 夏天停靠
+*e1
+@ending shao 錄音帶的B面
